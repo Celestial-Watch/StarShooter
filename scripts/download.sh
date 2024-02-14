@@ -6,7 +6,7 @@ fi
 if [ "$1" = "all" ]; then
   echo "Downloading all data..."
   gsutil -m cp -r "gs://mlp-asteroid-data/*" data
-else if [ "$1" = "new" ]; then
+elif [ "$1" = "new" ]; then
   echo "Downloading all new data..."
   gsutil -m cp -r -n "gs://mlp-asteroid-data/30x30_images" data
 else
@@ -17,4 +17,3 @@ else
     "gs://mlp-asteroid-data/rejected_mover_images_lookup.csv" \
     data
 fi
-
