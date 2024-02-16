@@ -10,5 +10,5 @@ elif [ "$1" = "new" ]; then
 else
   echo "Downloading only the 30x30 images and lookup files..."
   gsutil -m cp -r -n "gs://mlp-asteroid-data/30x30_images" data 
-  gsutil -m cp -r "gs://mlp-asteroid-data/csv/*" data
+  gsutil -m cp -r "gs://mlp-asteroid-data/csv" data
 fi
