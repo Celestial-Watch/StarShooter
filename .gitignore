@@ -160,3 +160,5 @@ cython_debug/
 #.idea/
 
 data/
+src/centered-on-asteroid/logs/
+src/centered-on-asteroid/model/
