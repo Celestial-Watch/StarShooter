@@ -4,6 +4,8 @@ import pandas.api.typing as pd_typing
 from typing import List
 from PIL import Image
 import torchvision
+from typing import Tuple
+
 
 def get_dataframe(path_to_csvs: str) -> pd.DataFrame:
     """
@@ -27,10 +29,11 @@ def get_dataset(
     movers_agg: pd_typing.DataFrameGroupBy,
     path_to_images: str,
     image_shape: tuple = (30, 30),
-) -> torch.utils.data.TensorDataset:
+) -> Tuple[torch.utils.data.TensorDataset, List[str]]:
     # Generate input, output pairs
     x_tensors = []
     y_hat_tensors = []
+    mover_ids = []
     for mover_id, group_data in movers_agg:
         image_tensors = []
         # Ignore sequences that aren't 4 images long
@@ -60,11 +63,12 @@ def get_dataset(
             x_tensor = torch.cat(image_tensors, dim=2)
             x_tensors.append(x_tensor)
             y_hat_tensors.append(torch.tensor([[group_data["label"].iloc[0]]]))
+            mover_ids.append(mover_id)
 
     x = torch.concat(x_tensors)
     y_hat = torch.concat(y_hat_tensors)
     data_set = torch.utils.data.TensorDataset(x, y_hat)
-    return data_set
+    return data_set, mover_ids
 
 
 def get_loaders(

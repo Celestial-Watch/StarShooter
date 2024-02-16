@@ -159,7 +159,7 @@ if __name__ == "__main__":
     # Load data
     path_to_data = os.path.abspath("./../../data/") + "/"
     movers_agg = get_dataframe(path_to_data + "csv/")
-    data_set = get_dataset(movers_agg, path_to_data + "30x30_images/")
+    data_set, _ = get_dataset(movers_agg, path_to_data + "30x30_images/")
     train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
 
     model = train(
