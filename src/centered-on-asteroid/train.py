@@ -32,7 +32,9 @@ def get_dataframe(path_to_csvs: str) -> pd.DataFrame:
 
 
 def get_dataset(
-    movers_agg: pd_typing.DataFrameGroupBy, path_to_images: str, image_shape: tuple = (30, 30)
+    movers_agg: pd_typing.DataFrameGroupBy,
+    path_to_images: str,
+    image_shape: tuple = (30, 30),
 ) -> torch.utils.data.TensorDataset:
     # Generate input, output pairs
     x_tensors = []
@@ -41,13 +43,17 @@ def get_dataset(
         image_tensors = []
         # Ignore sequences that aren't 4 images long
         if len(group_data) != 4:
-            print(group_data)
+            print(f"Skipping {mover_id} sequence with length: {len(group_data)}")
             continue
+
         for _, row in group_data.iterrows():
             image_path = path_to_images + row["file_name"]
-
-            # Read image as PIL Image and convert to grayscale
-            image = Image.open(image_path).convert("L")
+            try:
+                # Read image as PIL Image and convert to grayscale
+                image = Image.open(image_path).convert("L")
+            except FileNotFoundError:
+                print(f"Image of {mover_id} not found: {image_path}")
+                break
 
             # Convert PIL Image to torch.Tensor
             transform = torchvision.transforms.ToTensor()
@@ -56,11 +62,12 @@ def get_dataset(
             # Reshape image tensor to match the expected input shape
             image_tensor = image_tensor.view(1, 1, *image_shape)
             image_tensors.append(image_tensor)
-
-        # Concatenate over width dimension -> (1, 1, 120, 30)
-        x_tensor = torch.cat(image_tensors, dim=2)
-        x_tensors.append(x_tensor)
-        y_hat_tensors.append(torch.tensor([[group_data["label"].iloc[0]]]))
+        else:
+            # Loop finished without break
+            # Concatenate over width dimension -> (1, 1, 120, 30)
+            x_tensor = torch.cat(image_tensors, dim=2)
+            x_tensors.append(x_tensor)
+            y_hat_tensors.append(torch.tensor([[group_data["label"].iloc[0]]]))
 
     x = torch.concat(x_tensors)
     y_hat = torch.concat(y_hat_tensors)
