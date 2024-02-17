@@ -5,6 +5,7 @@ import time
 from tqdm import tqdm
 import os
 from argparse import ArgumentParser
+from typing import List
 
 image_csv_path = "csv/image.csv"
 # images contain -> mover_id, file_name, resolution, meta_data
@@ -54,7 +55,15 @@ position_table_labels = [
 bad_request_output = "<p>\n nice try.\n <br/>\n logged.\n <br/>\n bye.\n</p>\n"
 
 
-def get_image(index: str) -> bool:
+def get_image(
+    base: str,
+    index: str,
+    bad_request_output: str,
+    image_table_labels: List[str],
+    position_table_labels: List[str],
+    image_csv_path: str,
+    mover_csv_path: str,
+) -> bool:
     url = base + index
     print(url)
     r = requests.get(url)
@@ -126,12 +135,12 @@ def get_image(index: str) -> bool:
     return True
 
 
-def save_progress(index: int):
+def save_progress(index: int, tracking_file: str):
     with open(tracking_file, "w") as f:
         f.write(str(index))
 
 
-def load_progress():
+def load_progress(tracking_file: str):
     if os.path.exists(tracking_file):
         with open(tracking_file, "r") as f:
             return int(f.read())
@@ -150,10 +159,18 @@ if __name__ == "__main__":
     upload_bucket_csv = "gs://mlp-asteroid-data/csv/"
     upload_checker = 0
 
-    current_index = load_progress()
+    current_index = load_progress(tracking_file)
     for i in tqdm(range(current_index, TOTAL_MOVERS)):
-        if get_image(str(i)):
-            save_progress(i)
+        if get_image(
+            base,
+            str(i),
+            bad_request_output,
+            image_table_labels,
+            position_table_labels,
+            image_csv_path,
+            mover_csv_path,
+        ):
+            save_progress(i, tracking_file)
             time.sleep(1)
             upload_checker += 1
 

@@ -12,7 +12,7 @@ cookie_token = "PHPSESSID=363c79f1832ff4318156867127ab18ac"
 
 # This function makes the request to the server and downloads the images
 # only if four a present
-def get_four_30x30(url: str, mover_id: str):
+def get_four_30x30(url: str, mover_id: str, mover_image_csv: str):
     r = requests.get(url, headers={"Cookie": cookie_token})
     soup = BeautifulSoup(r.content, "html.parser")
     contents = soup.findAll("tr")
@@ -39,13 +39,13 @@ def get_four_30x30(url: str, mover_id: str):
 
 # This function is used to save the progress of the save
 # taking an index as input
-def save_progress(index: int):
+def save_progress(index: int, tracking_file: str):
     with open(tracking_file, "w") as f:
         f.write(str(index))
 
 
 # This function will return the index of the last mover download
-def load_progress():
+def load_progress(tracking_file: str):
     if os.path.exists(tracking_file):
         with open(tracking_file, "r") as f:
             return int(f.read())
@@ -68,10 +68,10 @@ if __name__ == "__main__":
     upload_bucket = "gs://mlp-asteroid-data/csv/"
     upload_checker = 0
 
-    current_index = load_progress()
+    current_index = load_progress(tracking_file)
     for i in tqdm(range(current_index, len(mover_csv))):
-        get_four_30x30(base + mover_csv["Link"][i], mover_csv["Name"][i])
-        save_progress(i)
+        get_four_30x30(base + mover_csv["Link"][i], mover_csv["Name"][i], mover_image_csv)
+        save_progress(i, tracking_file)
         time.sleep(1)
         upload_checker += 1
 
