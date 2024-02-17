@@ -3,47 +3,13 @@ from tqdm import tqdm
 import os
 from argparse import ArgumentParser
 from utils import save_progress, load_progress, get_mover_data
-from config import BASE
+from config import BASE, META_DATA_COLUM_NAMES, POSITION_TABLE_COLUMN_NAMES
 
 TOTAL_MOVERS = 400_000
 MOVER_BASE = f"{BASE}/mover.php?id="
-
-image_table_labels = [
-    "exposure_begin",
-    "exposure_time",
-    "ccd_temperature",
-    "background_mean",
-    "background_sigma",
-    "right_ascension",
-    "declination",
-    "angle",
-    "azimuth",
-    "altitude",
-    "airmass",
-    "magnitude_zero_point",
-    "pixel_scale_x",
-    "pixel_scale_y",
-    "number_of_detections",
-    "number_of_stars",
-    "average_residual",
-    "rms_residual",
-    "fit_order",
-    "offset_right_ascension",
-    "offset_declination",
-    "offset",
-]
-
-position_table_labels = [
-    "x",
-    "y",
-    "flux",
-    "right_ascension_",
-    "declination_",
-    "magnitude",
-]
-
+image_table_labels = META_DATA_COLUM_NAMES[1:]
+position_table_labels = POSITION_TABLE_COLUMN_NAMES[1:]
 bad_request_output = "<p>\n nice try.\n <br/>\n logged.\n <br/>\n bye.\n</p>\n"
-
 
 if __name__ == "__main__":
     data_folder = os.path.abspath("./../../data")

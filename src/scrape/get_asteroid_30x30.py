@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 import os
 from argparse import ArgumentParser
 from utils import save_progress, load_progress
-from config import BASE, COOKIE_TOKEN
+from config import BASE, SESSION_ID
 
 
 # This function makes the request to the server and downloads the images
@@ -16,7 +16,7 @@ def get_four_30x30(
     mover_id: str,
     mover_image_csv: str,
     base: str = BASE,
-    cookie_token: str = COOKIE_TOKEN,
+    cookie_token: str = SESSION_ID,
 ):
     r = requests.get(url, headers={"Cookie": cookie_token})
     soup = BeautifulSoup(r.content, "html.parser")

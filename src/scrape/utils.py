@@ -4,6 +4,7 @@ import requests
 from bs4 import BeautifulSoup
 from typing import List
 import time
+from config import BASE, SESSION_ID
 
 
 def save_progress(file: str, index: int):
@@ -76,7 +77,7 @@ def download_images(
 
 def get_image_meta_data(
     soup: BeautifulSoup,
-    image_links: List[str],
+    file_names: List[str],
     meta_data_columns: List[str],
     position_columns: List[str],
     mover_id: str,
@@ -95,7 +96,6 @@ def get_image_meta_data(
     ]
 
     # Combine all the data
-    file_names = [link.split("/")[-1] for link in image_links]
     file_names_df = pd.DataFrame(file_names, columns=["file_name"])
     meta_data_df = pd.DataFrame(meta_data, columns=meta_data_columns)
     position_df = pd.DataFrame(position_data, columns=position_columns)
@@ -137,8 +137,9 @@ def get_mover_data(
     mover_id, tag = extract_mover_id_tag(soup)
     image_links = get_centered_on_asteroid_image_links(soup)
     download_images(image_links, base, output_dir, sleep)
+    file_names = [link.split("/")[-1] for link in image_links]
     image_meta_data_df = get_image_meta_data(
-        soup, image_links, meta_data_columns, position_columns, mover_id
+        soup, file_names, meta_data_columns, position_columns, mover_id
     )
     mover_label_df = pd.DataFrame(
         [[mover_id, tag, index]], columns=["mover_id", "label_tag", "totas_id"]
@@ -152,3 +153,13 @@ def get_mover_data(
         mover_label_df.to_csv(f, header=False, index=False)
 
     return True
+
+
+def download_whole_image(
+    url: str, id: str, output_dir: str, base: str = BASE, session_id: str = SESSION_ID
+):
+    r = requests.get(url, headers={"Cookie": f"PHPSESSID={session_id}"})
+    soup = BeautifulSoup(r.content, "html.parser")
+    img = soup.findAll("img")[-1]
+    img_url = base + img["src"]
+    os.system(f"wget {img_url} -O {output_dir}/{id}.png")
