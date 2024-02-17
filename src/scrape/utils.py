@@ -46,14 +46,16 @@ def extract_mover_id_tag(soup: BeautifulSoup) -> Tuple[str, str]:
 
     Returns: Tuple of mover_id and tag
     """
-    mover_id, tag = (
+    cleaned_str = (
         str(soup.findAll("h3")[-1])
         .replace("<h3>", "")
         .replace("</h3>", "")
         .replace("Mover ", "")
         .replace("\n", "")
-        .split(" - ")
     )
+    if " - " not in cleaned_str:
+        return cleaned_str, ""
+    mover_id, tag = cleaned_str.split(" - ", maxsplit=1)
     return mover_id, tag
 
 
