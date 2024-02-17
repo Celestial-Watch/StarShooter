@@ -10,7 +10,7 @@ from utils import (
     get_mover_data,
 )
 from config import (
-    MOVER_BASE,
+    BASE,
     IMAGE_FOLDER,
     CSV_FOLDER,
     META_DATA_COLUM_NAMES,
@@ -18,7 +18,7 @@ from config import (
 )
 
 image_table_labels = META_DATA_COLUM_NAMES[1:]
-position_table_labels = POSITION_TABLE_COLUMN_NAMES[1:]
+position_table_labels = ["pos_" + label for label in POSITION_TABLE_COLUMN_NAMES[1:]]
 bad_request_output = "<p>\n nice try.\n <br/>\n logged.\n <br/>\n bye.\n</p>\n"
 
 if __name__ == "__main__":
@@ -42,8 +42,8 @@ if __name__ == "__main__":
             f.write(
                 "mover_id,file_name,"
                 + ",".join(image_table_labels)
-                + ",pos_"
-                + ",pos_".join(position_table_labels)
+                + ","
+                + ",".join(position_table_labels)
                 + "\n"
             )
 
@@ -63,7 +63,7 @@ if __name__ == "__main__":
         mover_id, totas_id = mover_totas_csv.iloc[idx]
         get_mover_data(
             str(totas_id),
-            MOVER_BASE,
+            BASE,
             bad_request_output,
             image_folder,
             image_table_labels,

@@ -8,12 +8,12 @@ from config import (
     POSITION_TABLE_COLUMN_NAMES,
     CSV_FOLDER,
     IMAGE_FOLDER,
-    MOVER_BASE,
+    BASE,
 )
 
 TOTAL_MOVERS = 400_000
 image_table_labels = META_DATA_COLUM_NAMES[1:]
-position_table_labels = POSITION_TABLE_COLUMN_NAMES[1:]
+position_table_labels = ["pos_" + label for label in POSITION_TABLE_COLUMN_NAMES[1:]]
 bad_request_output = "<p>\n nice try.\n <br/>\n logged.\n <br/>\n bye.\n</p>\n"
 
 if __name__ == "__main__":
@@ -24,8 +24,8 @@ if __name__ == "__main__":
             f.write(
                 "mover_id,file_name,"
                 + ",".join(image_table_labels)
-                + ",pos_"
-                + ",pos_".join(position_table_labels)
+                + ","
+                + ",".join(position_table_labels)
                 + "\n"
             )
 
@@ -56,7 +56,7 @@ if __name__ == "__main__":
     for i in tqdm(range(current_index, TOTAL_MOVERS)):
         if get_mover_data(
             str(i),
-            MOVER_BASE,
+            BASE,
             bad_request_output,
             image_folder,
             image_table_labels,

@@ -177,7 +177,7 @@ def get_mover_data(
     Returns whether the request was successful or not
     """
     # Get html
-    url = base + index
+    url = base + f"/mover.php?id={index}"
     r = requests.get(url)
     soup = BeautifulSoup(r.content, "html.parser")
 
