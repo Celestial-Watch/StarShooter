@@ -51,6 +51,7 @@ def extract_mover_id_tag(soup: BeautifulSoup) -> Tuple[str, str]:
         .replace("<h3>", "")
         .replace("</h3>", "")
         .replace("Mover ", "")
+        .replace("\n", "")
         .split(" - ")
     )
     return mover_id, tag
