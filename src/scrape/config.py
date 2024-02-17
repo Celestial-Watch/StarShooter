@@ -2,6 +2,7 @@ import os
 
 # Requests
 BASE = "https://totas.cosmos.esa.int/"
+MOVER_BASE = BASE + "mover.php?id="
 SESSION_ID = "b5a872e917a6b75070ee5c1d27e9a584"
 
 # Structure

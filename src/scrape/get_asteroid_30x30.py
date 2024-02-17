@@ -4,7 +4,7 @@ import time
 import os
 from argparse import ArgumentParser
 from utils import save_progress, load_progress, get_n_centered_on_asteroid
-from config import BASE, IMAGE_FOLDER
+from config import MOVER_BASE, IMAGE_FOLDER
 
 if __name__ == "__main__":
     parse = ArgumentParser()
@@ -15,18 +15,23 @@ if __name__ == "__main__":
 
     mover_csv = pd.read_csv(args.mover_file)
     tracking_file = args.progress_file
-    mover_image_csv_path = args.mover_file.split(".")[0]
-    mover_image_csv = f"{mover_image_csv_path}_images_lookup.csv"
+
+    csv_path = "/".join(args.mover_file.split("/")[:-1])
+    mover_image_csv_file = args.mover_file.split("/")[-1]
+    output_csv = f"{csv_path}/{mover_image_csv_file.split('.')[0]}_images_lookup.csv"
+    with open(output_csv, "w") as f:
+        f.write("mover_id,file_name\n")
 
     upload_bucket = "gs://mlp-asteroid-data/csv/"
     upload_checker = 0
 
     current_index = load_progress(tracking_file)
     for i in tqdm(range(current_index, len(mover_csv))):
+        mover_id, totas_id = mover_csv.iloc[i]
         get_n_centered_on_asteroid(
-            BASE + mover_csv["Link"][i],
-            mover_csv["Name"][i],
-            mover_image_csv,
+            MOVER_BASE + str(totas_id),
+            mover_id,
+            output_csv,
             f"{IMAGE_FOLDER}/30x30_images",
         )
         save_progress(tracking_file, i)
@@ -34,6 +39,6 @@ if __name__ == "__main__":
         upload_checker += 1
 
         if upload_checker == 10:
-            os.system(f"gsutil -m cp {mover_image_csv} {upload_bucket}")
+            os.system(f"gsutil -m cp {output_csv} {upload_bucket}")
             upload_checker = 0
             time.sleep(2)
