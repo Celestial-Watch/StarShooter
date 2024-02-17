@@ -2,23 +2,33 @@ import os
 import pandas as pd
 import requests
 from bs4 import BeautifulSoup
-from typing import List
+from typing import List, Tuple
 import time
 from config import BASE, SESSION_ID
 
 
-def save_progress(file: str, index: int):
+def save_progress(file: str, index: int) -> None:
     """
     Save the index of the last mover downloaded
+
+    Args:
+        file (str): The file to save the index to
+        index (int): The index to save
     """
     print(f"Saving progress: {index}")
     with open(file, "w") as f:
         f.write(str(index))
 
 
-def load_progress(file: str, default: int = 0):
+def load_progress(file: str, default: int = 0) -> int:
     """
     Get the index of the last mover downloaded
+
+    Args:
+        file (str): The file to get the index from
+        default (int, optional): The default index. Defaults to 0.
+
+    Returns: The index of the last mover downloaded
     """
     if os.path.exists(file):
         with open(file, "r") as f:
@@ -27,9 +37,14 @@ def load_progress(file: str, default: int = 0):
         return default
 
 
-def extract_mover_id_tag(soup: BeautifulSoup) -> tuple:
+def extract_mover_id_tag(soup: BeautifulSoup) -> Tuple[str, str]:
     """
     Extract mover_id and tag
+
+    Args:
+        soup (BeautifulSoup): The soup of the page
+
+    Returns: Tuple of mover_id and tag
     """
     mover_id, tag = (
         str(soup.findAll("h3")[-1])
@@ -44,6 +59,11 @@ def extract_mover_id_tag(soup: BeautifulSoup) -> tuple:
 def get_centered_on_asteroid_image_links(soup: BeautifulSoup) -> List[str]:
     """
     Get the links to the images that are centered on the asteroid
+
+    Args:
+        soup (BeautifulSoup): The soup of the page
+
+    Returns: List of image links
     """
     # Get the index of the image row
     contents = soup.findAll("tr")
@@ -64,10 +84,10 @@ def download_images(
     Download the images
 
     Args:
-        image_links: List of image links
-        base: Base url
-        output_dir: Directory to save the images
-        sleep: Time to sleep between downloads
+        image_links (List[str]): The links to the images
+        base (str): The base url
+        output_dir (str): The directory to save the images
+        sleep (int, optional): Time to sleep between downloads. Defaults to 1.
     """
     for image_link in image_links:
         image_name = image_link.split("/")[-1]
@@ -75,13 +95,25 @@ def download_images(
         time.sleep(sleep)
 
 
-def get_image_meta_data(
+def extract_image_meta_data(
     soup: BeautifulSoup,
     file_names: List[str],
     meta_data_columns: List[str],
     position_columns: List[str],
     mover_id: str,
 ) -> pd.DataFrame:
+    """
+    Extract the meta data of the images froum the soup
+
+    Args:
+        soup: The soup of the page
+        file_names: The names of the files
+        meta_data_columns: The columns of the meta data
+        position_columns: The columns of the position data
+        mover_id: The mover id
+
+    Returns: DataFrame of the image meta data
+    """
     tables = soup.findAll("tr")
     meta_data = [
         [data.text for data in table.find_all("td")[1:]]
@@ -122,6 +154,19 @@ def get_mover_data(
     sleep: int = 1,
 ) -> bool:
     """
+    Download images of a mover centered on the asteroid and save the meta data of the images
+
+    Args:
+        index (str): The index of the mover
+        base (str): The base url
+        bad_request_output (str): The output of the bad request
+        output_dir (str): The directory to save the images
+        meta_data_columns (List[str]): The columns of the meta data
+        position_columns (List[str]): The columns of the position data
+        image_csv_path (str): The csv file to write the image meta data to
+        mover_csv_path (str): The csv file to write the mover data to
+        sleep (int, optional): Time to sleep between downloads. Defaults to 1.
+
     Returns whether the request was successful or not
     """
     # Get html
@@ -138,7 +183,7 @@ def get_mover_data(
     image_links = get_centered_on_asteroid_image_links(soup)
     download_images(image_links, base, output_dir, sleep)
     file_names = [link.split("/")[-1] for link in image_links]
-    image_meta_data_df = get_image_meta_data(
+    image_meta_data_df = extract_image_meta_data(
         soup, file_names, meta_data_columns, position_columns, mover_id
     )
     mover_label_df = pd.DataFrame(
@@ -158,6 +203,17 @@ def get_mover_data(
 def download_whole_image(
     url: str, id: str, output_dir: str, base: str = BASE, session_id: str = SESSION_ID
 ):
+    """
+    Gets full resolution images from the url
+
+    Args:
+        url (str): The url to scrape
+        id (str): The id of the mover
+        output_dir (str): The directory to save the images
+        base (str, optional): The base url. Defaults to BASE.
+        session_id (str, optional): The session id. Defaults to SESSION_ID.
+
+    """
     r = requests.get(url, headers={"Cookie": f"PHPSESSID={session_id}"})
     soup = BeautifulSoup(r.content, "html.parser")
     img = soup.findAll("img")[-1]
@@ -171,18 +227,29 @@ def get_n_centered_on_asteroid(
     mover_image_csv: str,
     output_dir: str,
     base: str = BASE,
-    cookie_token: str = SESSION_ID,
     required_images: int = 4,
     sleep: int = 1,
-):
-    r = requests.get(url, headers={"Cookie": cookie_token})
+) -> None:
+    """
+    Get images centered on the asteroid from url if there are required_images number of images
+
+    Args:
+        url (str): The url to scrape
+        mover_id (str): The mover id
+        mover_image_csv (str): The csv file to write the image names to
+        output_dir (str): The directory to save the images
+        base (str, optional): The base url. Defaults to BASE.
+        required_images (int, optional): The number of images required. Defaults to 4.
+        sleep (int, optional): Time to sleep between downloads. Defaults to 1.
+    """
+    r = requests.get(url)
     soup = BeautifulSoup(r.content, "html.parser")
 
     # Get the data
     image_links = get_centered_on_asteroid_image_links(soup)
     if len(image_links) == required_images:
         download_images(image_links, base, output_dir, sleep)
-        
+
         # Write to csv
         image_names = [link.split("/")[-1] for link in image_links]
         with open(mover_image_csv, "a") as f:
@@ -190,4 +257,3 @@ def get_n_centered_on_asteroid(
                 f.write(f"{mover_id},{image}\n")
     else:
         print(f"Skipping {mover_id}")
-    

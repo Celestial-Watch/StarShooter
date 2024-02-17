@@ -51,6 +51,7 @@ if __name__ == "__main__":
     args = parse.parse_args()
     tracking_file = args.progress_file
 
+    # Mover ids start at 1
     current_index = load_progress(tracking_file, default=1)
     for i in tqdm(range(current_index, TOTAL_MOVERS)):
         if get_mover_data(
