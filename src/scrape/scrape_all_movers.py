@@ -4,12 +4,11 @@ import os
 from argparse import ArgumentParser
 from utils import save_progress, load_progress, get_mover_data
 from config import (
-    BASE,
     META_DATA_COLUM_NAMES,
     POSITION_TABLE_COLUMN_NAMES,
     CSV_FOLDER,
     IMAGE_FOLDER,
-    MOVER_BASE
+    MOVER_BASE,
 )
 
 TOTAL_MOVERS = 400_000
@@ -25,7 +24,8 @@ if __name__ == "__main__":
             f.write(
                 "mover_id,file_name,"
                 + ",".join(image_table_labels)
-                + ",".join(position_table_labels)
+                + ","
+                + ",pos_".join(position_table_labels)
                 + "\n"
             )
 
