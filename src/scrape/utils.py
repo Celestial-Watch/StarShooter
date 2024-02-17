@@ -163,3 +163,31 @@ def download_whole_image(
     img = soup.findAll("img")[-1]
     img_url = base + img["src"]
     os.system(f"wget {img_url} -O {output_dir}/{id}.png")
+
+
+def get_n_centered_on_asteroid(
+    url: str,
+    mover_id: str,
+    mover_image_csv: str,
+    output_dir: str,
+    base: str = BASE,
+    cookie_token: str = SESSION_ID,
+    required_images: int = 4,
+    sleep: int = 1,
+):
+    r = requests.get(url, headers={"Cookie": cookie_token})
+    soup = BeautifulSoup(r.content, "html.parser")
+
+    # Get the data
+    image_links = get_centered_on_asteroid_image_links(soup)
+    if len(image_links) == required_images:
+        download_images(image_links, base, output_dir, sleep)
+        
+        # Write to csv
+        image_names = [link.split("/")[-1] for link in image_links]
+        with open(mover_image_csv, "a") as f:
+            for image in image_names:
+                f.write(f"{mover_id},{image}\n")
+    else:
+        print(f"Skipping {mover_id}")
+    

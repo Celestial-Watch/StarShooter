@@ -3,7 +3,13 @@ from tqdm import tqdm
 import os
 from argparse import ArgumentParser
 from utils import save_progress, load_progress, get_mover_data
-from config import BASE, META_DATA_COLUM_NAMES, POSITION_TABLE_COLUMN_NAMES
+from config import (
+    BASE,
+    META_DATA_COLUM_NAMES,
+    POSITION_TABLE_COLUMN_NAMES,
+    CSV_FOLDER,
+    IMAGE_FOLDER,
+)
 
 TOTAL_MOVERS = 400_000
 MOVER_BASE = f"{BASE}/mover.php?id="
@@ -12,11 +18,8 @@ position_table_labels = POSITION_TABLE_COLUMN_NAMES[1:]
 bad_request_output = "<p>\n nice try.\n <br/>\n logged.\n <br/>\n bye.\n</p>\n"
 
 if __name__ == "__main__":
-    data_folder = os.path.abspath("./../../data")
-    csv_folder = f"{data_folder}/csv"
-
     image_csv = "all_movers_images.csv"
-    image_csv_path = f"{csv_folder}/{image_csv}"
+    image_csv_path = f"{CSV_FOLDER}/{image_csv}"
     if not os.path.exists(image_csv_path):
         with open(image_csv_path, "w") as f:
             f.write(
@@ -27,19 +30,19 @@ if __name__ == "__main__":
             )
 
     mover_csv = "all_movers.csv"
-    mover_csv_path = f"{csv_folder}/{mover_csv}"
+    mover_csv_path = f"{CSV_FOLDER}/{mover_csv}"
     if not os.path.exists(mover_csv_path):
         with open(mover_csv_path, "w") as f:
             f.write("mover_id,label_tag,totas_id\n")
 
-    relative_image_folder = "images/all_movers"
-    image_folder = f"{data_folder}/{relative_image_folder}"
+    relative_image_folder = "all_movers"
+    image_folder = f"{IMAGE_FOLDER}/{relative_image_folder}"
     if not os.path.exists(image_folder):
         os.makedirs(image_folder)
 
     # GS definitions
     upload_bucket_base = "gs://mlp-asteroid-data"
-    upload_bucket_images = f"{upload_bucket_base}/{relative_image_folder}/"
+    upload_bucket_images = f"{upload_bucket_base}/images/{relative_image_folder}/"
     upload_bucket_csv = f"{upload_bucket_base}/csv/"
 
     # Parse the arguments
@@ -69,7 +72,7 @@ if __name__ == "__main__":
             # Uploading
             os.system(f"gsutil -m cp -n -r {image_folder} {upload_bucket_images}")
             time.sleep(2)
-            os.system(f"gsutil -m cp -r {csv_folder} {upload_bucket_csv}")
+            os.system(f"gsutil -m cp -r {CSV_FOLDER} {upload_bucket_csv}")
             time.sleep(2)
 
             break
