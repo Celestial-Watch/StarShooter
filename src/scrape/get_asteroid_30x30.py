@@ -5,9 +5,8 @@ import time
 from bs4 import BeautifulSoup
 import os
 from argparse import ArgumentParser
-
-BASE = "https://totas.cosmos.esa.int/"
-COOKIE_TOKEN = "PHPSESSID=363c79f1832ff4318156867127ab18ac"
+from utils import save_progress, load_progress
+from config import BASE, COOKIE_TOKEN
 
 
 # This function makes the request to the server and downloads the images
@@ -43,22 +42,6 @@ def get_four_30x30(
         print(f"Skipping {mover_id}")
 
 
-# This function is used to save the progress of the save
-# taking an index as input
-def save_progress(index: int, tracking_file: str):
-    with open(tracking_file, "w") as f:
-        f.write(str(index))
-
-
-# This function will return the index of the last mover download
-def load_progress(tracking_file: str):
-    if os.path.exists(tracking_file):
-        with open(tracking_file, "r") as f:
-            return int(f.read())
-    else:
-        return 0
-
-
 if __name__ == "__main__":
     parse = ArgumentParser()
     parse.add_argument("--mover_file", type=str, default="movers.csv")
@@ -79,7 +62,7 @@ if __name__ == "__main__":
         get_four_30x30(
             BASE + mover_csv["Link"][i], mover_csv["Name"][i], mover_image_csv
         )
-        save_progress(i, tracking_file)
+        save_progress(tracking_file, i)
         time.sleep(1)
         upload_checker += 1
 

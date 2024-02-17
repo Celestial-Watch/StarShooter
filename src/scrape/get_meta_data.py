@@ -1,8 +1,7 @@
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
-
-BASE = "https://totas.cosmos.esa.int/"
+from config import BASE
 
 
 # Let's write a function that does all of the above

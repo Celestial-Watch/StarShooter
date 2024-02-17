@@ -4,8 +4,7 @@ import pandas as pd
 import time
 from bs4 import BeautifulSoup
 import os
-
-BASE = "https://totas.cosmos.esa.int/"
+from config import BASE
 
 
 def get_image(url: str, id_: str, base: str = BASE):
