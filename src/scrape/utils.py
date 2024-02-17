@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 from typing import List, Tuple
 import time
 from config import BASE, SESSION_ID
+import subprocess
 
 
 def save_progress(file: str, index: int) -> None:
@@ -92,7 +93,11 @@ def download_images(
         os.makedirs(output_dir)
     for image_link in image_links:
         image_name = image_link.split("/")[-1]
-        os.system(f"wget {base + image_link} -O {output_dir}/{image_name}")
+        subprocess.run(
+            f"wget {base + image_link} -O {output_dir}/{image_name}",
+            shell=True,
+            capture_output=True,
+        )
         time.sleep(sleep)
 
 
@@ -219,7 +224,11 @@ def download_whole_image(
     soup = BeautifulSoup(r.content, "html.parser")
     img = soup.findAll("img")[-1]
     img_url = base + img["src"]
-    os.system(f"wget {img_url} -O {output_dir}/{id}.png")
+    subprocess.run(
+        f"wget {img_url} -O {output_dir}/{id}.png",
+        shell=True,
+        capture_output=True,
+    )
 
 
 def get_n_centered_on_asteroid(
