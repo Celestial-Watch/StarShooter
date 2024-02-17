@@ -147,12 +147,12 @@ if __name__ == "__main__":
     images_per_sequence = 4
     feature_vector_size = 10
 
-    model = model_def.MNN(images_per_sequence, feature_vector_size, image_shape)
+    model = model_def.CFN(images_per_sequence, feature_vector_size, image_shape)
 
     # Training parameters
     loss = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters())
-    epochs = 100
+    epochs = 10
     batch_size = 4
     expiremt_name = "end-to-end"
 
@@ -162,6 +162,7 @@ if __name__ == "__main__":
     data_set, _ = get_dataset(movers_agg, path_to_data + "30x30_images/")
     train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
 
+    print(f"Training on {len(train_loader)} samples.")
     model = train(
         model,
         train_loader,
