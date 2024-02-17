@@ -6,9 +6,6 @@ import torch.nn as nn
 import torch.optim as optim
 import torchvision.transforms as transforms
 
-# Assuming you have a dataset named 'dataset' containing your images and labels
-# Train the model
-
 
 def load_data() -> DataLoader:
     # Define transformations
@@ -59,13 +56,3 @@ def train_model(dataloader: DataLoader, epochs: int = 100) -> nn.Module:
                     (epoch + 1, i + 1, running_loss / 100))
                 running_loss = 0.0
 
-
-
-def main() -> nn.Module:
-    dataloader = load_data()
-    model = train_model(dataloader)
-    return model
-
-
-if __name__ == "__main__":
-    main()
