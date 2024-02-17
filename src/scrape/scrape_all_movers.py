@@ -13,10 +13,7 @@ mover_csv_path = "csv/mover.csv"
 # mover_id, label_tag, totas_id
 
 TOTAL_MOVERS = 400_000
-
-
-base = "https://totas.cosmos.esa.int/mover.php?id="
-cookie_token = ""
+BASE = "https://totas.cosmos.esa.int/mover.php?id="
 
 image_table_labels = [
     "exposure_begin",
@@ -162,7 +159,7 @@ if __name__ == "__main__":
     current_index = load_progress(tracking_file)
     for i in tqdm(range(current_index, TOTAL_MOVERS)):
         if get_image(
-            base,
+            BASE,
             str(i),
             bad_request_output,
             image_table_labels,

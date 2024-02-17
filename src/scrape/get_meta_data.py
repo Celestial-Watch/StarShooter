@@ -2,12 +2,11 @@ import requests
 import pandas as pd
 from bs4 import BeautifulSoup
 
-base="https://totas.cosmos.esa.int/"
+BASE = "https://totas.cosmos.esa.int/"
 
-mover_links = pd.read_csv("movers_no_green_annotation.csv").head(100)
 
-#Let's write a function that does all of the above
-def get_photo_meta_data(name : str, link : str, base : str):
+# Let's write a function that does all of the above
+def get_photo_meta_data(name: str, link: str, base: str):
     r = requests.get(base + link)
     soup = BeautifulSoup(r.text, "html.parser")
     tables = soup.find_all("tr")
@@ -54,10 +53,12 @@ def get_photo_meta_data(name : str, link : str, base : str):
     merged_df["Name"] = name
     return merged_df
 
+
+mover_links = pd.read_csv("movers_no_green_annotation.csv").head(100)
 meta_data = pd.concat(
-        [
-            get_photo_meta_data(name, link, base)
-            for name, link in zip(mover_links["Name"], mover_links["Link"])
-            ]
-        )
+    [
+        get_photo_meta_data(name, link, BASE)
+        for name, link in zip(mover_links["Name"], mover_links["Link"])
+    ]
+)
 print(meta_data)

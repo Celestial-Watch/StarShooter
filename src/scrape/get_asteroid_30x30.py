@@ -6,13 +6,19 @@ from bs4 import BeautifulSoup
 import os
 from argparse import ArgumentParser
 
-base = "https://totas.cosmos.esa.int/"
-cookie_token = "PHPSESSID=363c79f1832ff4318156867127ab18ac"
+BASE = "https://totas.cosmos.esa.int/"
+COOKIE_TOKEN = "PHPSESSID=363c79f1832ff4318156867127ab18ac"
 
 
 # This function makes the request to the server and downloads the images
 # only if four a present
-def get_four_30x30(url: str, mover_id: str, mover_image_csv: str):
+def get_four_30x30(
+    url: str,
+    mover_id: str,
+    mover_image_csv: str,
+    base: str = BASE,
+    cookie_token: str = COOKIE_TOKEN,
+):
     r = requests.get(url, headers={"Cookie": cookie_token})
     soup = BeautifulSoup(r.content, "html.parser")
     contents = soup.findAll("tr")
@@ -70,7 +76,9 @@ if __name__ == "__main__":
 
     current_index = load_progress(tracking_file)
     for i in tqdm(range(current_index, len(mover_csv))):
-        get_four_30x30(base + mover_csv["Link"][i], mover_csv["Name"][i], mover_image_csv)
+        get_four_30x30(
+            BASE + mover_csv["Link"][i], mover_csv["Name"][i], mover_image_csv
+        )
         save_progress(i, tracking_file)
         time.sleep(1)
         upload_checker += 1
