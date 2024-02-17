@@ -42,7 +42,7 @@ if __name__ == "__main__":
             f.write(
                 "mover_id,file_name,"
                 + ",".join(image_table_labels)
-                + ","
+                + ",pos_"
                 + ",pos_".join(position_table_labels)
                 + "\n"
             )
