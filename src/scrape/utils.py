@@ -15,7 +15,6 @@ def save_progress(file: str, index: int) -> None:
         file (str): The file to save the index to
         index (int): The index to save
     """
-    print(f"Saving progress: {index}")
     with open(file, "w") as f:
         f.write(str(index))
 
@@ -89,6 +88,8 @@ def download_images(
         output_dir (str): The directory to save the images
         sleep (int, optional): Time to sleep between downloads. Defaults to 1.
     """
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     for image_link in image_links:
         image_name = image_link.split("/")[-1]
         os.system(f"wget {base + image_link} -O {output_dir}/{image_name}")
@@ -257,3 +258,27 @@ def get_n_centered_on_asteroid(
                 f.write(f"{mover_id},{image}\n")
     else:
         print(f"Skipping {mover_id}")
+
+
+def get_mover_list(condition: int, csv_file: str, base: str = BASE):
+    """
+    Gets a mapping from mover_id to totas_id
+
+    Args:
+        condition (int): The condition to filter the movers
+        csv_file (str): The file to write the data to
+        base (str, optional): The base url. Defaults to BASE.
+    """
+    url = f"{base}/index.php?list=Movers&cond={condition}"
+    r = requests.get(url)
+    soup = BeautifulSoup(r.content, "html.parser")
+
+    mover_table = soup.findAll("table")[-1]
+    mover_rows = mover_table.findAll("tr")[1:]
+
+    with open(csv_file, "w") as f:
+        f.write("mover_id,totas_id\n")
+        for mover_row in mover_rows:
+            totas_id = mover_row.find("a")["href"].split("=")[-1]
+            mover_id = mover_row.find("a").text
+            f.write(f"{mover_id},{totas_id}\n")
