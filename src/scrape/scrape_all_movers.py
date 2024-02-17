@@ -9,10 +9,10 @@ from config import (
     POSITION_TABLE_COLUMN_NAMES,
     CSV_FOLDER,
     IMAGE_FOLDER,
+    MOVER_BASE
 )
 
 TOTAL_MOVERS = 400_000
-MOVER_BASE = f"{BASE}/mover.php?id="
 image_table_labels = META_DATA_COLUM_NAMES[1:]
 position_table_labels = POSITION_TABLE_COLUMN_NAMES[1:]
 bad_request_output = "<p>\n nice try.\n <br/>\n logged.\n <br/>\n bye.\n</p>\n"
