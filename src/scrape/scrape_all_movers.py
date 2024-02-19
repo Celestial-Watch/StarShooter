@@ -2,47 +2,61 @@ import time
 from tqdm import tqdm
 import os
 from argparse import ArgumentParser
-from utils import save_progress, load_progress, get_mover_data
+from utils import save_progress, load_progress, download_mover_data
 from config import (
     META_DATA_COLUM_NAMES,
     POSITION_TABLE_COLUMN_NAMES,
     CSV_FOLDER,
     IMAGE_FOLDER,
     BASE,
+    MOVER_TABLE_COLUMN_NAMES,
 )
+import numpy as np
 
 TOTAL_MOVERS = 400_000
-image_table_labels = META_DATA_COLUM_NAMES[1:]
-position_table_labels = ["pos_" + label for label in POSITION_TABLE_COLUMN_NAMES[1:]]
 bad_request_output = "<p>\n nice try.\n <br/>\n logged.\n <br/>\n bye.\n</p>\n"
 
 if __name__ == "__main__":
-    image_csv = "all_movers_images.csv"
-    image_csv_path = f"{CSV_FOLDER}/{image_csv}"
+    image_csv = "image.csv"
+    image_csv_path = f"{CSV_FOLDER}/all_movers/{image_csv}"
     if not os.path.exists(image_csv_path):
+        if not os.path.exists(f"{CSV_FOLDER}/all_movers"):
+            os.makedirs(f"{CSV_FOLDER}/all_movers")
+
         with open(image_csv_path, "w") as f:
-            f.write(
-                "mover_id,file_name,"
-                + ",".join(image_table_labels)
-                + ","
-                + ",".join(position_table_labels)
-                + "\n"
-            )
+            f.write(",".join(META_DATA_COLUM_NAMES) + "\n")
 
-    mover_csv = "all_movers.csv"
-    mover_csv_path = f"{CSV_FOLDER}/{mover_csv}"
+    position_csv = "position.csv"
+    position_csv_path = f"{CSV_FOLDER}/all_movers/{position_csv}"
+    if not os.path.exists(position_csv_path):
+        if not os.path.exists(f"{CSV_FOLDER}/all_movers"):
+            os.makedirs(f"{CSV_FOLDER}/all_movers")
+
+        with open(position_csv_path, "w") as f:
+            f.write(",".join(POSITION_TABLE_COLUMN_NAMES) + "\n")
+
+    mover_csv = "mover.csv"
+    mover_csv_path = f"{CSV_FOLDER}/all_movers/{mover_csv}"
     if not os.path.exists(mover_csv_path):
-        with open(mover_csv_path, "w") as f:
-            f.write("mover_id,label_tag,totas_id\n")
+        if not os.path.exists(f"{CSV_FOLDER}/all_movers"):
+            os.makedirs(f"{CSV_FOLDER}/all_movers")
 
-    relative_image_folder = "all_movers"
-    image_folder = f"{IMAGE_FOLDER}/{relative_image_folder}"
-    if not os.path.exists(image_folder):
-        os.makedirs(image_folder)
+        with open(mover_csv_path, "w") as f:
+            f.write(",".join(MOVER_TABLE_COLUMN_NAMES) + "\n")
+
+    centered_on_asteroid_image_folder_rel = "centered_on_asteroid"
+    centered_image_folder = f"{IMAGE_FOLDER}/{centered_on_asteroid_image_folder_rel}"
+    if not os.path.exists(centered_image_folder):
+        os.makedirs(centered_image_folder)
+
+    whole_image_folder_rel = "whole_images"
+    whole_image_folder = f"{IMAGE_FOLDER}/{whole_image_folder_rel}"
+    if not os.path.exists(whole_image_folder):
+        os.makedirs(whole_image_folder)
 
     # GS definitions
     upload_bucket_base = "gs://mlp-asteroid-data"
-    upload_bucket_images = f"{upload_bucket_base}/images/{relative_image_folder}/"
+    upload_bucket_images = f"{upload_bucket_base}/images/"
     upload_bucket_csv = f"{upload_bucket_base}/csv/"
 
     # Parse the arguments
@@ -53,18 +67,28 @@ if __name__ == "__main__":
 
     # Mover ids start at 1
     current_index = load_progress(tracking_file, default=1)
+    already_downloaded = []
+    if os.path.exists("already_downloaded.txt"):
+        with open("already_downloaded.txt", "r") as f:
+            already_downloaded = f.read().split("\n")
     for i in tqdm(range(current_index, TOTAL_MOVERS)):
-        if get_mover_data(
+        success, already_downloaded = download_mover_data(
             str(i),
             BASE,
             bad_request_output,
-            image_folder,
-            image_table_labels,
-            position_table_labels,
+            centered_image_folder,
+            whole_image_folder,
+            META_DATA_COLUM_NAMES,
+            POSITION_TABLE_COLUMN_NAMES,
+            MOVER_TABLE_COLUMN_NAMES,
             image_csv_path,
             mover_csv_path,
-        ):
+            position_csv_path,
+            already_downloaded,
+        )
+        if success:
             save_progress(tracking_file, i)
+            np.savetxt("already_downloaded.txt", already_downloaded, fmt="%s")
             time.sleep(1)
         else:
             print(f"Print Bad Request at {i} !!!!")

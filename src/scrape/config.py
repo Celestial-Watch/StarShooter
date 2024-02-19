@@ -6,8 +6,11 @@ MOVER_BASE = BASE + "mover.php?id="
 SESSION_ID = "b5a872e917a6b75070ee5c1d27e9a584"
 
 # Structure
+MOVER_TABLE_COLUMN_NAMES = ["mover_id", "sohas_id", "label"]
 POSITION_TABLE_COLUMN_NAMES = [
-    "MpcLine",
+    "mover_id",
+    "image_id",
+    "centered_image_id",
     "X",
     "Y",
     "Flux",
@@ -16,7 +19,8 @@ POSITION_TABLE_COLUMN_NAMES = [
     "Magnitude",
 ]
 META_DATA_COLUM_NAMES = [
-    "FileName",
+    "image_id",
+    "link",
     "ExposureBegin",
     "ExposureTime",
     "CcdTemperature",
