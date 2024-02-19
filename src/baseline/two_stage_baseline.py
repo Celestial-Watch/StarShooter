@@ -2,7 +2,6 @@ import torch.nn as nn
 import torch
 from torchvision.models import resnet18, ResNet18_Weights
 from typing import Tuple
-from config import Stage1_Weights
 
 PATH = ""
 
