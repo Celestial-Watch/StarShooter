@@ -130,7 +130,9 @@ def extract_image_data(
     ]
 
     # Combine all the data
-    image_meta_data_df = pd.DataFrame(meta_data, columns=meta_data_columns)
+    image_meta_data_df = pd.DataFrame(meta_data, columns=meta_data_columns).sort_values(
+        "image_id"
+    )
 
     return image_meta_data_df
 
@@ -169,7 +171,9 @@ def extract_position_meta_data(
         image_info,
         columns=position_data_columns[:3],
     )
-    position_df = pd.concat([image_info_df, position_df], axis=1)
+    position_df = pd.concat([image_info_df, position_df], axis=1).sort_values(
+        "image_id"
+    )
 
     return position_df
 

@@ -70,7 +70,7 @@ if __name__ == "__main__":
     already_downloaded = []
     if os.path.exists("already_downloaded.txt"):
         with open("already_downloaded.txt", "r") as f:
-            already_downloaded = f.read().split("\n")
+            already_downloaded = f.read().split("\n")[:-1]
     for i in tqdm(range(current_index, TOTAL_MOVERS)):
         success, already_downloaded = download_mover_data(
             str(i),
@@ -95,7 +95,7 @@ if __name__ == "__main__":
             print("Stopping")
 
             # Uploading
-            os.system(f"gsutil -m cp -n -r {image_folder} {upload_bucket_images}")
+            os.system(f"gsutil -m cp -n -r {IMAGE_FOLDER} {upload_bucket_images}")
             time.sleep(2)
             os.system(f"gsutil -m cp -r {CSV_FOLDER} {upload_bucket_csv}")
             time.sleep(2)
