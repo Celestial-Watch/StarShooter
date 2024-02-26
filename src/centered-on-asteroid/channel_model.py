@@ -26,7 +26,7 @@ class ChannelResNet(nn.Module):
         x = self.bn1(x)
         x = self.relu(x)
         
-        x = self.residual_block(x)
+        x = self.residual_block1(x)
         
         x = x.view(x.size(0), -1)
         x = self.fc(x)
