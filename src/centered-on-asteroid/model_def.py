@@ -72,14 +72,17 @@ class MCFN(nn.Module):
             images_per_sequence * feature_vector_size + metadata_size, 1
         )
 
-    def forward(self, x: torch.Tensor, metadata: torch.Tensor) -> torch.Tensor:
+    def forward(self, x: Tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
         """
         Args:
-            x (torch.Tensor): Concatenated images of shape (n, 1, images_per_sequence * image_shape[0], image_shape[1])
-            metadata (torch.Tensor): Metadata of shape (n, metadata_size)
+            x (Tuple[torch.Tensor, torch.Tensor]): Tuple containing images and metadata
+
+        images: Concatenated images of shape (n, 1, images_per_sequence * image_shape[0], image_shape[1])
+        metadata: Metadata of shape (n, metadata_size)
         """
-        # The input is the concatenation of the images, split back into individual images
-        images = torch.split(x, self.image_shape[0], dim=2)
+        images, metadata = x
+        # Images is the concatenation of the images, split back into individual images
+        images = torch.split(images, self.image_shape[0], dim=2)
         feature_vectors = [self.cnn(image) for image in images]
         feature_vectors.append(metadata)
         feature_vector = torch.cat(feature_vectors, dim=1)
