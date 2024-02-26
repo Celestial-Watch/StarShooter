@@ -1,12 +1,25 @@
 import requests
 import pandas as pd
 from bs4 import BeautifulSoup
-from config import BASE, POSITION_TABLE_COLUMN_NAMES, META_DATA_COLUM_NAMES
+from config import BASE, POSITION_TABLE_COLUMN_NAMES, META_DATA_COLUM_NAMES, CSV_FOLDER
+from utils import extract_image_meta_data
+from typing import List, Optional
 
 
-def get_photo_meta_data(mover_id: str, link: str, base: str):
-    r = requests.get(base + link)
+def get_photo_meta_data(
+    mover_id: str,
+    totas_id: str,
+    base: str,
+    file_names: List[str],
+    meta_data_columns: Optional[List[str]] = META_DATA_COLUM_NAMES,
+    position_columns: Optional[List[str]] = POSITION_TABLE_COLUMN_NAMES,
+):
+    r = requests.get(base + f"/mover.php?id={totas_id}")
     soup = BeautifulSoup(r.text, "html.parser")
+
+    extract_image_meta_data(
+        soup, file_names, meta_data_columns, position_columns, mover_id
+    )
 
     tables = soup.find_all("tr")
     images_tables = [i for i in tables if ".fit" in i.text]
@@ -24,17 +37,17 @@ def get_photo_meta_data(mover_id: str, link: str, base: str):
     ]
     positions_labels = POSITION_TABLE_COLUMN_NAMES[1:]
     positions_df = pd.DataFrame(positions_tables, columns=positions_labels)
-    
     merged_df = pd.concat([images_df, positions_df], axis=1)
     merged_df["Name"] = mover_id
     return merged_df
 
 
-mover_links = pd.read_csv("movers_no_green_annotation.csv").head(100)
+csv_file = CSV_FOLDER + "/movers_cond_12.csv"
+mover_links = pd.read_csv(csv_file).head(3)
 meta_data = pd.concat(
     [
         get_photo_meta_data(name, link, BASE)
-        for name, link in zip(mover_links["Name"], mover_links["Link"])
+        for name, link in zip(mover_links["mover_id"], mover_links["totas_id"])
     ]
 )
 print(meta_data)
