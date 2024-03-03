@@ -61,16 +61,15 @@ class MLP(nn.Module):
         hidden_layers: int = 2,
     ):
         super(MLP, self).__init__()
-        self.input_layer = nn.Linear(input_size, hidden_size)
-        self.hidden_layers = [
-            nn.Linear(hidden_size, hidden_size) for _ in range(hidden_layers)
-        ]
+        self.layers = nn.ModuleList([nn.Linear(input_size, hidden_size)])
+        self.layers.extend(
+            [nn.Linear(hidden_size, hidden_size) for _ in range(hidden_layers)]
+        )
         self.output_layer = nn.Linear(hidden_size, output_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        x = torch.relu(self.input_layer(x))
-        for hidden_layer in self.hidden_layers:
-            x = torch.relu(hidden_layer(x))
+        for layer in self.layers:
+            x = torch.relu(layer(x))
         x = torch.sigmoid(self.output_layer(x))
         return x
 
