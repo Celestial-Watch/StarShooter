@@ -35,14 +35,8 @@ if __name__ == "__main__":
     images_per_sequence = 4
     feature_vector_size = 10
 
-    model = model_def.MCFN(images_per_sequence, feature_vector_size, image_shape, 1)
-
-    # Training parameters
-    loss = torch.nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters())
-    epochs = 10
-    batch_size = 4
-    expiremt_name = "end-to-end"
+    engineered_features = "movement_vectors"
+    expirement_name = f"end-to-end-{engineered_features}"
 
     # Load data
     path_to_data = os.path.abspath("./../../data/")
@@ -50,21 +44,27 @@ if __name__ == "__main__":
     bogus_movers_file = f"{path_to_data}/csv/movers_cond_2_image_meta_data.csv"
     images_folder = f"{path_to_data}/images/centered_on_asteroid/"
     movers_agg = get_dataframe(real_movers_file, bogus_movers_file)
-    data_set, _ = get_dataset(movers_agg, images_folder)
-    metadata = get_position_tensor(movers_agg)
-    # metadata = torch.fill(metadata, 0)
-    extra_features = get_engineered_features(metadata)
+    data_set, mover_ids = get_dataset(movers_agg, images_folder)
 
-    # plt.scatter(
-    #     extra_features[:], data_set.tensors[1].numpy(), c=data_set.tensors[1].numpy()
-    # )
-    # plt.xlabel("Feature 1")
-    # plt.ylabel("Feature 2")
-    # plt.title("Extra Features Colored by Label")
-    # plt.colorbar()
-    # plt.show()
+    # Get engineered features
+    movers_agg_filtered = movers_agg.filter(
+        lambda x: any(x["mover_id"].isin(mover_ids))
+    ).groupby("mover_id")
+    metadata = get_position_tensor(movers_agg_filtered)
+    # metadata = torch.fill(metadata, 0)
+    extra_features = get_engineered_features(metadata, engineered_features)
 
     data_set = CustomDataset(data_set.tensors[0], extra_features, data_set.tensors[1])
+
+    model = model_def.MCFN(
+        images_per_sequence, feature_vector_size, image_shape, len(extra_features[0])
+    )
+
+    # Training parameters
+    loss = torch.nn.BCELoss()
+    optimizer = torch.optim.Adam(model.parameters())
+    epochs = 10
+    batch_size = 4
 
     train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
 
@@ -76,5 +76,5 @@ if __name__ == "__main__":
         loss,
         optimizer,
         epochs,
-        expiremt_name,
+        expirement_name,
     )
