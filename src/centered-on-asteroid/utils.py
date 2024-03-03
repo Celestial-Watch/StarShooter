@@ -6,6 +6,10 @@ from PIL import Image
 import torchvision
 from typing import Tuple
 import math
+import numpy as np
+
+x_cord = "pos_RightAscension"
+y_cord = "pos_Declination"
 
 
 def get_position_tensor(
@@ -13,27 +17,99 @@ def get_position_tensor(
 ) -> torch.Tensor:
     movers_positions = []
     for mover_id, group_data in movers_agg:
-        # Ignore sequences that aren't 4 images long
-        if len(group_data) != 4:
-            # print(f"Skipping {mover_id} sequence with length: {len(group_data)}")
-            continue
-
         mover_positions = []
         for _, row in group_data.iterrows():
-            if math.isnan(row["pos_X"]) or math.isnan(row["pos_Y"]):
+            if math.isnan(row[x_cord]) or math.isnan(row[y_cord]):
                 print(f"Missing position data for {mover_id}")
                 break
-            mover_positions.append(row["pos_X"])
-            mover_positions.append(row["pos_Y"])
+            mover_positions.append(row[x_cord])
+            mover_positions.append(row[y_cord])
         movers_positions.append(torch.Tensor(mover_positions))
     return torch.stack(movers_positions)
 
 
-def get_engineered_features(movers_positions: torch.Tensor) -> torch.Tensor:
-    get_max_grad_diffs = []
-    for mover_positions in movers_positions:
-        get_max_grad_diffs.append(torch.Tensor([get_max_grad_diff(mover_positions)]))
-    return torch.stack(get_max_grad_diffs)
+def get_engineered_features(
+    movers_positions: torch.Tensor, type: str = "max_grad_diff"
+) -> torch.Tensor:
+    """
+
+    Args:
+        movers_positions (torch.Tensor): (x, y) position for the 4 images. Shape: (n, 8)
+        type (str): The type of engineered features to return. Options: "max_grad_diff", "gradients", "movement_vectors"
+
+    Returns: The engineered features for the given type (n, z), where z is the feature vector size
+    """
+    match type:
+        case "max_grad_diff":
+            get_max_grad_diffs = []
+            for mover_positions in movers_positions:
+                get_max_grad_diffs.append(get_max_grad_diff(mover_positions))
+            return torch.stack(get_max_grad_diffs)
+        case "max_ang_diff":
+            max_ang_diffs = []
+            for mover_positions in movers_positions:
+                max_ang_diffs.append(get_max_ang_diff(mover_positions))
+            return torch.stack(max_ang_diffs)
+        case "max_movement_vector_distance":
+            max_movement_vector_distances = []
+            for mover_positions in movers_positions:
+                max_movement_vector_distances.append(
+                    get_max_movement_vector_distance(mover_positions, False)
+                )
+            return torch.stack(max_movement_vector_distances)
+        case "max_movement_vector_distance_normalised":
+            max_movement_vector_distances = []
+            for mover_positions in movers_positions:
+                max_movement_vector_distances.append(
+                    get_max_movement_vector_distance(mover_positions, True)
+                )
+            return torch.stack(max_movement_vector_distances)
+        case "gradients":
+            gradients = []
+            for mover_positions in movers_positions:
+                gradients.append(get_gradients(mover_positions))
+            return torch.stack(gradients)
+        case "angles":
+            angles = []
+            for mover_positions in movers_positions:
+                angles.append(get_angles(mover_positions))
+            return torch.stack(angles)
+        case "movement_vectors":
+            movement_vectors = []
+            for mover_positions in movers_positions:
+                movement_vectors.append(
+                    torch.flatten(get_movement_vectors(mover_positions))
+                )
+
+            return torch.stack(movement_vectors)
+        case "positions":
+            return movers_positions
+        case _:
+            raise ValueError(f"Invalid type: {type}")
+
+
+def get_max_movement_vector_distance(
+    positions: torch.Tensor, normalise: bool
+) -> torch.Tensor:
+    """
+    Returns the maximum distance between the movement vectors of the 4 images
+
+    Args:
+        positions (torch.Tensor): (x, y) position for the 4 images. Shape: (8)
+        normalise (bool): Whether to normalise the distance
+
+    Returns: Maximum distance (1,)
+    """
+    deltas = get_movement_vectors(positions)
+    average_distance = torch.mean(torch.norm(deltas, dim=1)) if normalise else 1
+
+    distances = []
+    for delta1_idx, delta2_idx in torch.combinations(
+        torch.arange(len(deltas)), r=2, with_replacement=False
+    ):
+        delta = deltas[delta1_idx] - deltas[delta2_idx]
+        distances.append(torch.norm(delta))
+    return torch.max(torch.stack(distances)) / average_distance
 
 
 def get_gradients(positions: torch.Tensor, epsilon: float = 1e-6) -> torch.Tensor:
@@ -61,8 +137,7 @@ def get_gradients(positions: torch.Tensor, epsilon: float = 1e-6) -> torch.Tenso
             print(positions)
         if gradients[-1].isinf():
             print(f"Infinite gradient detected: {gradients[-1]}")
-    gradients = torch.stack(gradients)
-    return gradients
+    return torch.stack(gradients)
 
 
 def get_max_grad_diff(positions: torch.Tensor) -> torch.Tensor:
@@ -71,6 +146,8 @@ def get_max_grad_diff(positions: torch.Tensor) -> torch.Tensor:
 
     Args:
         positions (torch.Tensor): (x, y) position for the 4 images. Shape: (8)
+
+    Returns: Maximum difference in gradients (1,)
     """
     gradients = get_gradients(positions)
 
@@ -81,6 +158,55 @@ def get_max_grad_diff(positions: torch.Tensor) -> torch.Tensor:
     # Calculate the maximum difference in gradients
     max_grad_diff = max(grad_diffs)
     return torch.Tensor([max_grad_diff])
+
+
+def get_angles(positions: torch.Tensor, epsilon: float = 1e-6) -> torch.Tensor:
+    """
+    Returns the angles between the 4 images
+
+    Args:
+        positions (torch.Tensor): (x, y) position for the 4 images. Shape: (8)
+
+    Returns: Angles (3,)
+    """
+    deltas = get_movement_vectors(positions)
+
+    angles = []
+    for i in range(0, len(deltas)):
+        if deltas[i][0] < 0:
+            angle = torch.atan(deltas[i][1] / (deltas[i][0] - epsilon))
+        else:
+            angle = torch.atan(deltas[i][1] / (deltas[i][0] + epsilon))
+        angles.append(angle * 180 / math.pi)
+
+        if angles[-1].isnan():
+            print(f"{deltas[i][0]}, {deltas[i][1]}")
+            print(f"NaN angle detected: {angles[-1]}")
+            print(positions)
+        if angles[-1].isinf():
+            print(f"Infinite angle detected: {angles[-1]}")
+    return torch.stack(angles)
+
+
+def get_max_ang_diff(positions: torch.Tensor) -> torch.Tensor:
+    """
+    Returns the maximum difference in angle between the 4 images
+
+    Args:
+        positions (torch.Tensor): (x, y) position for the 4 images. Shape: (8)
+
+    Returns: Maximum difference in angle (1,)
+    """
+    angles = get_angles(positions)
+
+    ang_diffs = []
+    for ang1, ang2 in torch.combinations(angles, r=2, with_replacement=False):
+        diff = abs(ang1 - ang2)
+        if diff > 180:
+            diff = 360 - diff
+        ang_diffs.append(diff)
+
+    return torch.Tensor([max(ang_diffs)])
 
 
 def get_movement_vectors(positions: torch.Tensor) -> torch.Tensor:
@@ -115,8 +241,8 @@ def get_dataframe(real_movers_csv: str, bogus_movers_csv: str) -> pd.DataFrame:
     bogus_movers = pd.read_csv(bogus_movers_csv)
 
     # Ignore rows with missing data
-    real_movers = real_movers.dropna(subset=["pos_X", "pos_Y", "file_name"])
-    bogus_movers = bogus_movers.dropna(subset=["pos_X", "pos_Y", "file_name"])
+    real_movers = real_movers.dropna(subset=[x_cord, y_cord, "file_name"])
+    bogus_movers = bogus_movers.dropna(subset=[x_cord, y_cord, "file_name"])
 
     # Add labels
     real_movers["label"] = 1
