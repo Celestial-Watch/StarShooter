@@ -52,6 +52,29 @@ class CFN(nn.Module):
         return x
 
 
+class MLP(nn.Module):
+    def __init__(
+        self,
+        input_size: int,
+        output_size: int,
+        hidden_size: int = 64,
+        hidden_layers: int = 2,
+    ):
+        super(MLP, self).__init__()
+        self.input_layer = nn.Linear(input_size, hidden_size)
+        self.hidden_layers = [
+            nn.Linear(hidden_size, hidden_size) for _ in range(hidden_layers)
+        ]
+        self.output_layer = nn.Linear(hidden_size, output_size)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        x = torch.relu(self.input_layer(x))
+        for hidden_layer in self.hidden_layers:
+            x = torch.relu(hidden_layer(x))
+        x = torch.sigmoid(self.output_layer(x))
+        return x
+
+
 # Meta Convolutional Fusion Network
 class MCFN(nn.Module):
     def __init__(
@@ -60,6 +83,8 @@ class MCFN(nn.Module):
         feature_vector_size: int,
         image_shape: Tuple[int, int],
         metadata_size: int,
+        hidden_mlp_layers: int = 2,
+        hidden_mlp_size: int = 64,
     ):
         super(MCFN, self).__init__()
         self.image_shape = image_shape
@@ -68,8 +93,11 @@ class MCFN(nn.Module):
         # CNN for the images, ouputs a feature vector
         self.cnn = CNN(feature_vector_size)
         # Merge the feature vectors and metadata to a single label
-        self.merge = nn.Linear(
-            images_per_sequence * feature_vector_size + metadata_size, 1
+        self.mlp = MLP(
+            images_per_sequence * feature_vector_size + metadata_size,
+            1,
+            hidden_size=hidden_mlp_size,
+            hidden_layers=hidden_mlp_layers,
         )
 
     def forward(self, x: Tuple[torch.Tensor, torch.Tensor]) -> torch.Tensor:
@@ -88,6 +116,5 @@ class MCFN(nn.Module):
         feature_vector = torch.cat(feature_vectors, dim=1)
 
         # Fusion
-        x = self.merge(feature_vector)
-        x = torch.sigmoid(x)
+        x = self.mlp(feature_vector)
         return x
