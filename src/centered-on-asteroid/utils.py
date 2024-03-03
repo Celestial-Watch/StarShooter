@@ -109,7 +109,7 @@ def get_max_movement_vector_distance(
     ):
         delta = deltas[delta1_idx] - deltas[delta2_idx]
         distances.append(torch.norm(delta))
-    return torch.max(torch.stack(distances)) / average_distance
+    return torch.Tensor([torch.max(torch.stack(distances)) / average_distance])
 
 
 def get_gradients(positions: torch.Tensor, epsilon: float = 1e-6) -> torch.Tensor:
@@ -291,7 +291,7 @@ def get_dataset(
             # Concatenate over width dimension -> (1, 1, 120, 30)
             x_tensor = torch.cat(image_tensors, dim=2)
             x_tensors.append(x_tensor)
-            y_hat_tensors.append(torch.tensor([[group_data["label"].iloc[0]]]))
+            y_hat_tensors.append(torch.Tensor([[group_data["label"].iloc[0]]]))
             mover_ids.append(mover_id)
 
     x = torch.concat(x_tensors)
