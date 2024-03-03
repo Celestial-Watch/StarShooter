@@ -36,22 +36,19 @@ def get_engineered_features(movers_positions: torch.Tensor) -> torch.Tensor:
     return torch.stack(get_max_grad_diffs)
 
 
-def get_max_grad_diff(positions: torch.Tensor) -> torch.Tensor:
+def get_gradients(positions: torch.Tensor, epsilon: float = 1e-6) -> torch.Tensor:
     """
-    Returns the maximum difference in gradients between the 4 images
+    Returns the gradients of position changes between the 4 images
 
     Args:
-        positions (torch.Tensor): A tensor of shape (8)
-    """
-    # Reshape to (4, 2)
-    positions = positions.view(4, 2)
+        positions (torch.Tensor): (x, y) position for the 4 images. Shape: (8,)
+        epsilon (float): Small value to prevent division by zero
 
-    deltas = []
-    for i in range(1, len(positions)):
-        deltas.append(positions[i] - positions[i - 1])
+    Returns: Gradients (3,)
+    """
+    deltas = get_movement_vectors(positions)
 
     gradients = []
-    epsilon = 1e-6
     for i in range(0, len(deltas)):
         if deltas[i][0] < 0:
             gradients.append(deltas[i][1] / (deltas[i][0] - epsilon))
@@ -65,6 +62,17 @@ def get_max_grad_diff(positions: torch.Tensor) -> torch.Tensor:
         if gradients[-1].isinf():
             print(f"Infinite gradient detected: {gradients[-1]}")
     gradients = torch.stack(gradients)
+    return gradients
+
+
+def get_max_grad_diff(positions: torch.Tensor) -> torch.Tensor:
+    """
+    Returns the maximum difference in gradients between the 4 images
+
+    Args:
+        positions (torch.Tensor): (x, y) position for the 4 images. Shape: (8)
+    """
+    gradients = get_gradients(positions)
 
     grad_diffs = []
     for grad1, grad2 in torch.combinations(gradients, r=2, with_replacement=False):
@@ -73,6 +81,25 @@ def get_max_grad_diff(positions: torch.Tensor) -> torch.Tensor:
     # Calculate the maximum difference in gradients
     max_grad_diff = max(grad_diffs)
     return torch.Tensor([max_grad_diff])
+
+
+def get_movement_vectors(positions: torch.Tensor) -> torch.Tensor:
+    """
+    Returns dx, dy movement vectors between the 4 images
+
+    Args:
+        positions (torch.Tensor): (x, y) position for the 4 images. Shape: (8,)
+
+    Returns: Movement vectors (3, 2)
+    """
+    # Reshape to (4, (x, y))
+    positions = positions.view(4, 2)
+
+    deltas = []
+    for i in range(1, len(positions)):
+        deltas.append(positions[i] - positions[i - 1])
+
+    return torch.stack(deltas)
 
 
 def get_dataframe(real_movers_csv: str, bogus_movers_csv: str) -> pd.DataFrame:
