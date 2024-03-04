@@ -35,7 +35,7 @@ if __name__ == "__main__":
     images_per_sequence = 4
     feature_vector_size = 10
 
-    engineered_features = "movement_vectors"
+    engineered_features = "positions"
     expirement_name = f"end-to-end-{engineered_features}"
 
     # Load data
@@ -47,32 +47,34 @@ if __name__ == "__main__":
     data_set, mover_ids = get_dataset(movers_agg, images_folder)
 
     # Get engineered features
-    movers_agg_filtered = movers_agg.filter(
+    movers_agg = movers_agg.filter(
         lambda x: any(x["mover_id"].isin(mover_ids))
     ).groupby("mover_id")
-    metadata = get_position_tensor(movers_agg_filtered)
-    # metadata = torch.fill(metadata, 0)
+    metadata = get_position_tensor(movers_agg)
     extra_features = get_engineered_features(metadata, engineered_features)
 
     data_set = CustomDataset(data_set.tensors[0], extra_features, data_set.tensors[1])
 
+    metadata_size = len(extra_features[0])
     model = model_def.MCFN(
-        images_per_sequence, feature_vector_size, image_shape, len(extra_features[0])
+        images_per_sequence, feature_vector_size, image_shape, metadata_size
     )
 
+    print(f"Model: {model}")
     # Training parameters
     loss = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters())
     epochs = 10
     batch_size = 4
 
-    train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
+    train_loader, val_data_set = get_loaders(data_set, batch_size=batch_size)
 
     print(f"Training on {len(train_loader)*batch_size} samples.")
+    print(f"Validating on {len(val_data_set)} samples.")
     model = train(
         model,
         train_loader,
-        val_loader,
+        val_data_set,
         loss,
         optimizer,
         epochs,

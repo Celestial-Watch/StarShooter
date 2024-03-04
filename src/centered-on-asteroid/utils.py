@@ -40,6 +40,8 @@ def get_engineered_features(
     Returns: The engineered features for the given type (n, z), where z is the feature vector size
     """
     match type:
+        case "no_metadata":
+            return torch.full((len(movers_positions), 1), 0)
         case "max_grad_diff":
             get_max_grad_diffs = []
             for mover_positions in movers_positions:

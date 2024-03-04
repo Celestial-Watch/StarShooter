@@ -78,7 +78,7 @@ def report_performance(
 ) -> None:
     # Printing
     print("LOSS train {} valid {}".format(training_loss, val_loss))
-    print("ACCURACY: ", val_accuracy * 100, "%")
+    print("VALIDATION-ACCURACY: ", val_accuracy * 100, "%")
 
     # Loggingn
     logger.add_scalars(
