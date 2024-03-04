@@ -3,6 +3,9 @@ import numpy as np
 import config
 import pandas as pd
 from matplotlib import pyplot as plt
+import torchvision
+import torch
+
 
 def get_mover_labels(movers_list, csv_path):
     # Read the CSV file into a DataFrame
@@ -28,7 +31,7 @@ def get_mover_labels(movers_list, csv_path):
             
     return movers
 
-def images_to_fetch(csv, images_per_mover=3):
+def images_to_fetch(csv, images_per_mover=4):
     print(csv)
     df = pd.read_csv(csv)
     mover_counts = df['mover_id'].value_counts()
@@ -46,15 +49,18 @@ def images_to_fetch(csv, images_per_mover=3):
     return movers, np.array(small_image_ids, dtype=str), np.array(big_image_ids, dtype=str)
 
 
-def fetch_small_images(small_image_ids, image_path):
+def fetch_small_images(small_image_ids, image_path, image_shape=(30, 30)):
     # Determine the dimensions of the input array
     rows, cols = small_image_ids.shape
+    
     
     # Initialize an empty array with the same dimensions to store the NumPy arrays of images
     images = np.empty((rows, cols), dtype=object)
     
     # Iterate through the 2D array of image IDs
     for i in range(rows):
+        image_tensors = []
+
         for j in range(cols):
             # Construct the full path for each image
             image_file = f"{image_path}/{small_image_ids[i][j]}"
@@ -62,10 +68,24 @@ def fetch_small_images(small_image_ids, image_path):
             # Load the image using PIL, convert to grayscale, and then convert to a NumPy array
             try:
                 img = Image.open(image_file).convert('L')
-                images[i][j] = np.array(img)
             except FileNotFoundError:
                 print(f"Image {small_image_ids[i][j]} not found in {image_path}.")
                 images[i][j] = None  # Use None or a placeholder image if the image is not found
+
+            # Convert PIL Image to torch.Tensor
+            transform = torchvision.transforms.ToTensor()
+            image_tensor = transform(img)
+
+            # Reshape image tensor to match the expected input shape
+            image_tensor = image_tensor.view(1, 1, *image_shape)
+            image_tensors.append(image_tensor)
+        else:
+            # Loop finished without break
+            # Concatenate over width dimension -> (1, 1, 120, 30)
+            x_tensor = torch.cat(image_tensors, dim=2)
+            x_tensors.append(x_tensor)
+            y_hat_tensors.append(torch.tensor([[group_data["label"].iloc[0]]]))
+            mover_ids.append(mover_id)
     
     return images
 
@@ -203,7 +223,7 @@ def get_datasets(crop_size):
 
     small_image_set = fetch_small_images(small_image_ids, config.SMALL_IMAGE_PATH)
     big_image_set, mover_positions = fetch_big_images(big_image_ids, movers, config.BIG_IMAGE_PATH)
-    cropped_image_set = crop_images(big_image_set, mover_positions, crop_size)
+    #cropped_image_set = crop_images(big_image_set, mover_positions, crop_size)
 
 def get_loaders(image_shape, batch_size):
     small_image_set, cropped_image_set, movers = get_datasets(image_shape[0])
