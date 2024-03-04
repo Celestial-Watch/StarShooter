@@ -68,6 +68,7 @@ if __name__ == "__main__":
     # Mover ids start at 1
     current_index = load_progress(tracking_file, default=1)
     already_downloaded = []
+    total_bad = 0
     if os.path.exists("already_downloaded.txt"):
         with open("already_downloaded.txt", "r") as f:
             already_downloaded = f.read().split("\n")[:-1]
@@ -91,13 +92,15 @@ if __name__ == "__main__":
             np.savetxt("already_downloaded.txt", already_downloaded, fmt="%s")
             time.sleep(1)
         else:
-            print(f"Print Bad Request at {i} !!!!")
-            print("Stopping")
+            total_bad += 1
+            if total_bad > 100:
+                print(f"Print Bad Request at {i} !!!!")
+                print("Stopping")
 
-            # Uploading
-            os.system(f"gsutil -m cp -n -r {IMAGE_FOLDER} {upload_bucket_images}")
-            time.sleep(2)
-            os.system(f"gsutil -m cp -r {CSV_FOLDER} {upload_bucket_csv}")
-            time.sleep(2)
+                # Uploading
+                os.system(f"gsutil -m cp -n -r {IMAGE_FOLDER} {upload_bucket_images}")
+                time.sleep(2)
+                os.system(f"gsutil -m cp -r {CSV_FOLDER} {upload_bucket_csv}")
+                time.sleep(2)
 
-            break
+                break

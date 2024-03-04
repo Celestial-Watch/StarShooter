@@ -76,7 +76,6 @@ def get_centered_on_asteroid_image_links(soup: BeautifulSoup) -> List[str]:
         if content.find("td").find("br"):
             image_row_idx = idx + 1
             break
-
     image_links = [img["src"] for img in contents[image_row_idx].findAll("img")[1:]]
     return image_links
 
@@ -241,7 +240,7 @@ def download_mover_data(
     mover_csv_path: str,
     position_csv_path: str,
     already_downloaded: List[str],
-    sleep: int = 1,
+    sleep: float = 0.5,
 ) -> Tuple[bool, List[str]]:
     """
     Download images of a mover centered on the asteroid and save the meta data of the images
@@ -270,7 +269,7 @@ def download_mover_data(
 
     # Whether request was successful
     if str(soup.prettify()) == bad_request_output:
-        return False
+        return (False, [])
 
     # Get the data
     sohas_id, tag = extract_sohas_id_tag(soup)
@@ -289,6 +288,7 @@ def download_mover_data(
     with open(image_csv_path, "a") as f:
         # ignore already downloaded images
         image_df = image_df[~image_df["image_id"].isin(already_downloaded)]
+        # print(image_df)
         for idx in range(len(image_df)):
             image_id = image_df["image_id"].iloc[idx]
             already_downloaded.append(image_id)
@@ -381,14 +381,18 @@ def download_whole_image(
 
     Returns: The url of the image
     """
-    r = requests.get(url, headers={"Cookie": f"PHPSESSID={session_id}"})
+    r = requests.get(
+        url, headers={"Cookie": "PHPSESSID=4968f2db96e72ca5b760ebe20418b651"}
+    )
     soup = BeautifulSoup(r.content, "html.parser")
 
     img = soup.findAll("img")[-1]
+    print(f"Whole image url: {soup.findAll('img')[-1]}")
     if not img["src"].startswith("image-view.php"):
         print(f"No image available for image id {id}")
         return ""
     img_url = base + img["src"]
+
     subprocess.run(
         f"wget {img_url} -O {output_dir}/{id}.png",
         shell=True,
