@@ -12,6 +12,20 @@ x_cord = "pos_RightAscension"
 y_cord = "pos_Declination"
 
 
+class CustomDataset(torch.utils.data.Dataset):
+    def __init__(self, images, metadata, labels):
+        assert len(images) == len(metadata) == len(labels)
+        self.images = images
+        self.metadata = metadata
+        self.labels = labels
+
+    def __len__(self):
+        return len(self.images)
+
+    def __getitem__(self, idx):
+        return (self.images[idx], self.metadata[idx]), self.labels[idx]
+
+
 def get_position_tensor(
     movers_agg: pd_typing.DataFrameGroupBy,
 ) -> torch.Tensor:
