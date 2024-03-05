@@ -143,8 +143,8 @@ def train(
 
 if __name__ == "__main__":
     # Model parameters
-    image_shape1 = (30, 30)
-    image_shape2 = (100, 100)
+    image_shape1 = 30
+    image_shape2 = 100
     images_per_sequence = 3
 
     model1 = channel_model.ChannelResNet()
