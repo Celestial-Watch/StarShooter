@@ -45,8 +45,8 @@ class DynamicCNN(nn.Module):
             kernel_size=self.maxpool_kernel_size, stride=self.maxpool_stride
         )
         output_size_after_max_pools = (
-            image_shape[0] // self.maxpool_kernel_size**self.num_conv_blocks,
-            image_shape[1] // self.maxpool_kernel_size**self.num_conv_blocks,
+            image_shape[0] // (self.maxpool_stride**self.num_conv_blocks),
+            image_shape[1] // (self.maxpool_stride**self.num_conv_blocks),
         )
 
         self.feature_vector = nn.Linear(
@@ -184,7 +184,7 @@ class MCFN(nn.Module):
 
 if __name__ == "__main__":
     # Comparing new Dynamic Model to old model
-    test_model = DynamicCNN(num_conv_blocks=3, filters_list=[16, 32, 64])
+    test_model = DynamicCNN(num_conv_blocks=2, filters_list=[16, 32])
     print(test_model)
 
     test_model = CNN(1)
