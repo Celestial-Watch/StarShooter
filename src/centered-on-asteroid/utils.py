@@ -178,7 +178,7 @@ def get_max_grad_diff(positions: torch.Tensor) -> torch.Tensor:
 
 def get_angles(positions: torch.Tensor, epsilon: float = 1e-6) -> torch.Tensor:
     """
-    Returns the angles between the 4 images
+    Returns the angles of the lines between the positions of the 4 images
 
     Args:
         positions (torch.Tensor): (x, y) position for the 4 images. Shape: (8)
