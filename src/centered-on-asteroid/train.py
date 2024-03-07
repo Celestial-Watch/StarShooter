@@ -7,15 +7,7 @@ from datetime import datetime
 from torch.utils import tensorboard
 import copy
 import os
-from utils import (
-    get_dataframe,
-    get_dataset,
-    get_loaders,
-    get_position_tensor,
-    get_engineered_features,
-    CustomDataset,
-)
-from argparse import ArgumentParser
+from utils import get_dataframe, get_dataset, get_loaders
 
 
 def train_one_epoch(
@@ -86,7 +78,7 @@ def report_performance(
 ) -> None:
     # Printing
     print("LOSS train {} valid {}".format(training_loss, val_loss))
-    print("VALIDATION-ACCURACY: ", val_accuracy * 100, "%")
+    print("ACCURACY: ", val_accuracy * 100, "%")
 
     # Loggingn
     logger.add_scalars(
@@ -121,7 +113,8 @@ def train(
 
     # Needed to compute validation accuracy
     val_images, val_labels = val_dataset[:]
-    best_val_loss = torch.inf
+
+    best_val_loss = 1_000_000.0
     best_model = model
     for epoch in range(num_epochs):
         print("EPOCH {}:".format(epoch + 1))
@@ -148,78 +141,26 @@ def train(
     return best_model
 
 
-def get_experiment_args():
-    parser = ArgumentParser()
-    parser.add_argument("--image_shape", type=int, nargs=2, default=(30, 30))
-    parser.add_argument("--images_per_sequence", type=int, default=4)
-    parser.add_argument("--feature_vector_size", type=int, default=10)
-    parser.add_argument("--loss", type=str, default="BCELoss")
-    parser.add_argument("--optimizer", type=str, default="Adam")
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--batch_size", type=int, default=4)
-    parser.add_argument("--experiment_name", type=str, default="end-to-end")
-    parser.add_argument("--metadata", type=str, default="None")
-    return parser.parse_args()
-
-
 if __name__ == "__main__":
-    # Loss lookup table
-    classification_loss_functions = {
-        "CrossEntropyLoss": nn.CrossEntropyLoss(),
-        "NLLLoss": nn.NLLLoss(),
-        "BCELoss": nn.BCELoss(),
-        "BCEWithLogitsLoss": nn.BCEWithLogitsLoss(),
-        "MultiLabelSoftMarginLoss": nn.MultiLabelSoftMarginLoss(),
-        "MultiMarginLoss": nn.MultiMarginLoss(),
-        "SoftMarginLoss": nn.SoftMarginLoss(),
-    }
-    args = get_experiment_args()
     # Model parameters
-    image_shape = args.image_shape
-    images_per_sequence = args.images_per_sequence
-    feature_vector_size = args.feature_vector_size
+    image_shape = (30, 30)
+    images_per_sequence = 4
+    feature_vector_size = 10
 
-    # Load data
-    # Ignore weird paths for now
-    path_to_data = os.path.abspath("./../../scripts/data")
-    real_movers_file = f"{path_to_data}/csv/csv/movers_cond_12_image_meta_data.csv"
-    bogus_movers_file = f"{path_to_data}/csv/csv/movers_cond_2_image_meta_data.csv"
-    images_folder = f"{path_to_data}/30x30_images/"
-    movers_agg = get_dataframe(real_movers_file, bogus_movers_file)
-    data_set, mover_ids = get_dataset(movers_agg, images_folder)
-
-    # Metadata
-    metadata = args.metadata
-    if metadata != "None":
-        # Get engineered features -- TODO: Add other metadata options
-        engineered_features = "positions"
-        movers_agg = movers_agg.filter(
-            lambda x: any(x["mover_id"].isin(mover_ids))
-        ).groupby("mover_id")
-        metadata = get_position_tensor(movers_agg)
-        extra_features = get_engineered_features(metadata, engineered_features)
-
-        data_set = CustomDataset(
-            data_set.tensors[0], extra_features, data_set.tensors[1]
-        )
-
-        metadata_size = len(extra_features[0])
-        model = model_def.MCFN(
-            images_per_sequence, feature_vector_size, image_shape, metadata_size
-        )
-    else:
-        model = model_def.CFN(images_per_sequence, feature_vector_size, image_shape)
+    model = model_def.CFN(images_per_sequence, feature_vector_size, image_shape)
 
     # Training parameters
-    loss = classification_loss_functions[args.loss]
+    loss = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters())
-    epochs = args.epochs
-    batch_size = args.batch_size
-    experiment_name = args.experiment_name
+    epochs = 10
+    batch_size = 4
+    expiremt_name = "end-to-end"
 
+    # Load data
+    path_to_data = os.path.abspath("./../../data/") + "/"
+    movers_agg = get_dataframe(path_to_data + "csv/")
+    data_set, _ = get_dataset(movers_agg, path_to_data + "30x30_images/")
     train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
-
-    print(f"Val loader: {val_loader}")
 
     print(f"Training on {len(train_loader)} samples.")
     model = train(
@@ -229,5 +170,5 @@ if __name__ == "__main__":
         loss,
         optimizer,
         epochs,
-        experiment_name,
+        expiremt_name,
     )
