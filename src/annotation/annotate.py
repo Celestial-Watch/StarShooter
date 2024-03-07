@@ -18,6 +18,10 @@ random.shuffle(images_path)
 
 image_idx = 0
 image = PhotoImage(file=images_path[image_idx])
+while image.width() != 30 or image.height() != 30:
+    print(f"Skipping image {images_path[image_idx]}")
+    image_idx += 1
+    image = PhotoImage(file=images_path[image_idx])
 # Upscale the image
 upscaled_image = image.zoom(8, 8)
 upscaled_image_label = tk.Label(root, image=upscaled_image)
@@ -67,6 +71,7 @@ if not os.path.exists(csv_file):
 # Create 8 buttons and add them to the frame
 photos = []
 for idx in range(0, 8):
+
     def get_func(idx):
         def save_annotation(index=idx):
             global image_idx
@@ -85,9 +90,14 @@ for idx in range(0, 8):
             image_idx += 1
             new_image_file_path = images_path[image_idx]
             new_image = PhotoImage(file=new_image_file_path)
+            while new_image.width() != 30 or new_image.height() != 30:
+                print(f"Skipping image {images_path[image_idx]}")
+                image_idx += 1
+                new_image = PhotoImage(file=images_path[image_idx])
             upscaled_new_image = new_image.zoom(8, 8)
             upscaled_image_label.configure(image=upscaled_new_image)
             upscaled_image_label.image = upscaled_new_image
+
         return save_annotation
 
     photos.append(PhotoImage(file=sample_images[idx]).zoom(4, 4))
