@@ -7,7 +7,7 @@ from datetime import datetime
 from torch.utils import tensorboard
 import copy
 import os
-from centre_images import get_loaders
+from centre_images import get_loaders, get_datasets
 
 
 def train_one_epoch(
@@ -145,6 +145,7 @@ if __name__ == "__main__":
     # Model parameters
     image_shape1 = 30
     image_shape2 = 100
+    crop_size = image_shape2
     images_per_sequence = 3
 
     model1 = channel_model.ChannelResNet()
@@ -162,7 +163,10 @@ if __name__ == "__main__":
     # Load data
     path_to_data = os.path.abspath("./../../data/") + "/"
 
-    train_loader1, val_loader1, train_loader2, val_loader2 = get_loaders(image_shape2, batch_size=batch_size)
+    small_image_set, big_image_set = get_datasets(crop_size)
+
+    train_loader1, val_loader1 = get_loaders(small_image_set, batch_size=batch_size)
+    train_loader2, val_loader2 = get_loaders(big_image_set, batch_size=batch_size)
 
     print(f"Training on {len(train_loader1) * batch_size} samples.")
     model1 = train(
