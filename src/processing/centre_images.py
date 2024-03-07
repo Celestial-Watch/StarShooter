@@ -2,95 +2,117 @@ from PIL import Image
 import numpy as np
 import config
 import pandas as pd
+import pandas.api.typing as pd_typing
 from matplotlib import pyplot as plt
 import torchvision
 import torch
+from typing import List, Tuple
+import os
 
 
-def get_mover_labels(movers_list, csv_path):
-    # Read the CSV file into a DataFrame
-    df = pd.read_csv(csv_path)
+def images_to_fetch(
+        csv_pos: str, 
+        csv_neg: str,
+        images_per_mover:int = 4
+        ):
     
-    # Filter the DataFrame to only include rows where the mover_id is in the movers_list
-    filtered_df = df[df['mover_id'].isin(movers_list)]
+    df_pos = pd.read_csv(csv_pos)
+    df_neg = pd.read_csv(csv_neg)
     
-    # Initialize an empty array to store the results
-    # Assuming the 'movers_list' is a list of mover IDs you're interested in
-    # The length of movers array is now the length of the filtered DataFrame
-    movers = np.empty((len(filtered_df), 2))
+    movers_pos = df_pos['mover_id'].unique()
+    movers_neg =  df_neg['mover_id'].unique()
     
-    # Iterate through the filtered DataFrame
-    for i, (index, row) in enumerate(filtered_df.iterrows()):
-        # The first column is assumed to be 'mover_id'
-        movers[i][0] = row['mover_id']
-        # Check the third column for the label, assuming it's named appropriately in the DataFrame
-        if row['label'] == "background noise":  # Replace 'label_column_name' with the actual name
-            movers[i][1] = 0
-        else:
-            movers[i][1] = 1
+    movers_pos['label'] = 1
+    movers_neg['label'] = 0
+
+    movers = pd.concat([movers_pos, movers_neg])
+
+    big_image_ids = np.empty((movers.shape[0], images_per_mover), dtype=object)
+    small_image_ids = np.empty((movers.shape[0], images_per_mover), dtype=object)
+    for label, df in enumerate([df_neg, df_pos]):
+        for i, mover in enumerate(df['mover_id']):
+            big_images = np.array(df[df['mover_id'] == mover]['image_id'].tolist())
+            small_images = np.array(df[df['mover_id'] == mover]['centered_image_id'].tolist())
             
-    return movers
+            big_image_ids[i] = big_images[:]
+            small_image_ids[i] = small_images[:]
 
-def images_to_fetch(csv, images_per_mover=4):
-    print(csv)
-    df = pd.read_csv(csv)
-    mover_counts = df['mover_id'].value_counts()
-    movers = mover_counts[mover_counts == images_per_mover].index.tolist()
+    return movers, small_image_ids, big_image_ids
 
-    big_image_ids = []
-    small_image_ids = []
-    for mover in movers:
-        big_images = df[df['mover_id'] == mover]['image_id'].tolist()
-        small_images = df[df['mover_id'] == mover]['centered_image_id'].tolist()
-        
-        big_image_ids.append(big_images)
-        small_image_ids.append(small_images)
-
-    return movers, np.array(small_image_ids, dtype=str), np.array(big_image_ids, dtype=str)
-
-
-def fetch_small_images(small_image_ids, image_path, image_shape=(30, 30)):
+def fetch_small_images(
+        small_image_ids: np.array, 
+        movers: pd.DataFrame,
+        image_path: str, 
+        image_shape: Tuple = (30, 30),
+        images_per_sequence: int = 3
+        ):
     # Determine the dimensions of the input array
+
     rows, cols = small_image_ids.shape
-    
     
     # Initialize an empty array with the same dimensions to store the NumPy arrays of images
     images = np.empty((rows, cols), dtype=object)
-    
-    # Iterate through the 2D array of image IDs
-    for i in range(rows):
-        image_tensors = []
 
-        for j in range(cols):
-            # Construct the full path for each image
-            image_file = f"{image_path}/{small_image_ids[i][j]}"
-            
-            # Load the image using PIL, convert to grayscale, and then convert to a NumPy array
+    
+    x_tensors = []
+    y_hat_tensors = []
+    movers_to_remove = []
+    
+    for i, row in movers.iterrows():
+        image_tensors = []
+        images = small_image_ids[i]
+        mover_id = row['mover_id']
+        label = row['label']
+
+        # Ignore sequences that aren't 4 images long
+        if len(images) != images_per_sequence:
+            print(f"Skipping {mover_id} sequence with length: {len(images)}")
+            continue
+
+        for image_id in images:
+            print(f"Fetching {image_id}")
             try:
-                img = Image.open(image_file).convert('L')
+                # Read image as PIL Image and convert to grayscale
+                image_full_path = os.path.join(image_path, image_id)
+                image = Image.open(image_full_path).convert("L")
             except FileNotFoundError:
-                print(f"Image {small_image_ids[i][j]} not found in {image_path}.")
-                images[i][j] = None  # Use None or a placeholder image if the image is not found
+                print(f"Image of {mover_id} not found: {image_full_path}")
+                movers_to_remove.append(mover_id)
+                break
 
             # Convert PIL Image to torch.Tensor
             transform = torchvision.transforms.ToTensor()
-            image_tensor = transform(img)
-
+            image_tensor = transform(image)
+        
             # Reshape image tensor to match the expected input shape
-            image_tensor = image_tensor.view(1, 1, *image_shape)
-            image_tensors.append(image_tensor)
+            try:
+                image_tensor = image_tensor.view(1, 1, *image_shape)
+                image_tensors.append(image_tensor)
+            except RuntimeError as e:
+                image_tensors = []
+                movers_to_remove.append(mover_id)
+                break
         else:
             # Loop finished without break
-            # Concatenate over width dimension -> (1, 1, 120, 30)
-            x_tensor = torch.cat(image_tensors, dim=2)
+            # Concatenate over width dimension -> (1, 4, 30, 30)
+            x_tensor = torch.cat(image_tensors, dim=1)
             x_tensors.append(x_tensor)
-            y_hat_tensors.append(torch.tensor([[group_data["label"].iloc[0]]]))
-            mover_ids.append(mover_id)
-    
-    return images
+            y_hat_tensors.append(torch.tensor([label]))
 
+    x = torch.concat(x_tensors)
+    y_hat = torch.concat(y_hat_tensors)
+    data_set = torch.utils.data.TensorDataset(x, y_hat)
+    return data_set, movers_to_remove
 
-def fetch_big_images(big_image_ids, movers, image_path, metadata_path):
+def fetch_cropped_images(
+        big_image_ids: np.array, 
+        movers: np.array,
+        movers_to_remove: np.array, 
+        image_path: str, 
+        metadata_path: str,
+        images_per_sequence: int = 3,
+        crop_size: int = 100
+        ):
     # Determine the dimensions of the input array
     rows, cols = big_image_ids.shape
     
@@ -102,56 +124,99 @@ def fetch_big_images(big_image_ids, movers, image_path, metadata_path):
     metadata = pd.read_csv(metadata_path)
 
     # Iterate through the 2D array of image IDs
-    for i in range(rows):
-        for j in range(cols):
-            # Construct the full path for each image
-            image_file = f"{image_path}/{big_image_ids[i][j]}.png"
-            
-            # Load the image using PIL, convert to grayscale, and then convert to a NumPy array
+    x_tensors = []
+    y_hat_tensors = []
+    mover_ids = []
+    for i, row in movers.iterrows():
+        image_tensors = []
+        images = big_image_ids[i]
+        mover_id = row['mover_id']
+        label = row['label']
+        if mover_id in movers_to_remove:
+            continue
+
+        # Ignore sequences that aren't 4 images long
+        if len(images) != images_per_sequence:
+            print(f"Skipping {mover_id} sequence with length: {len(images)}")
+            continue
+
+        for image_id in images:
+            print(image_id)
             try:
-                img = Image.open(image_file).convert('L')
-                images[i][j] = np.array(img)
+                # Read image as PIL Image and convert to grayscale
+                image_full_path = f"{image_path}{image_id}.png"
+                print(image_full_path)
+                image = Image.open(image_full_path).convert("L")
             except FileNotFoundError:
-                print(f"Image {big_image_ids[i][j]} not found in {image_path}.")
-                images[i][j] = None  # Use None or a placeholder image if the image is not found
-            
-            mover = movers[i][0]
+                print(f"Image of {mover_id} not found: {image_full_path}")
+                break
 
             # Get the pixel coordinates for the mover and image with a combination key
-            pixel_coords[i][j] = metadata.loc[(metadata['mover_id'] == mover) & (metadata['image_id'] == big_image_ids[i][j])][['X', 'Y']].values[0]
-    
-    return images, pixel_coords
+            pixel_coords = metadata.loc[(metadata['mover_id'] == mover_id) & (metadata['image_id'] == big_image_ids[i][j])][['X', 'Y']].values[0]
+
+
+            # Crop the image around the pixel coordinates
+            cropped_image = crop_image_around_pixel(image, crop_size, pixel_coords[i][j][0], pixel_coords[i][j][1])
+            
+            # Convert PIL Image to torch.Tensor
+            transform = torchvision.transforms.ToTensor()
+            image_tensor = transform(cropped_image)
+        
+            # Reshape image tensor to match the expected input shape
+            try:
+                image_tensor = image_tensor.view(1, 1, crop_size, crop_size)
+                image_tensors.append(image_tensor)
+            except RuntimeError as e:
+                image_tensors = []
+                break
+        else:
+            # Loop finished without break
+            # Concatenate over width dimension -> (1, 4, 30, 30)
+            x_tensor = torch.cat(image_tensors, dim=1)
+            x_tensors.append(x_tensor)
+            y_hat_tensors.append(torch.tensor([label]))
+            mover_ids.append(mover_id)
+
+    x = torch.concat(x_tensors)
+    y_hat = torch.concat(y_hat_tensors)
+    data_set = torch.utils.data.TensorDataset(x, y_hat)
+    return data_set, pixel_coords
 
 
 
-def crop_image_around_pixel(image: np.ndarray, x: int, pixel_x: int, pixel_y: int, zero_padding: bool = False) -> Image:
+def crop_image_around_pixel(
+        image: np.ndarray, 
+        crop_size: int, 
+        pixel_x: int, 
+        pixel_y: int
+        ) -> Image:
     image = Image.fromarray(image)
     width, height = image.size
-    half_x = x // 2
-    left = max(0, pixel_x - half_x)
-    upper = max(0, pixel_y - half_x)
-    right = min(width, pixel_x + half_x)
-    lower = min(height, pixel_y + half_x)
+    half_crop = crop_size // 2
+    left = max(0, pixel_x - half_crop)
+    upper = max(0, pixel_y - half_crop)
+    right = min(width, pixel_x + half_crop)
+    lower = min(height, pixel_y + half_crop)
 
     left_padding = right_padding = upper_padding = lower_padding = 0
 
     if left == 0:
-        left_padding = half_x - pixel_x
+        left_padding = half_crop - pixel_x
         left = 0
     if upper == 0:
-        upper_padding = half_x - pixel_y
+        upper_padding = half_crop - pixel_y
         upper = 0
     if right == width:
-        right_padding = half_x - (width - pixel_x)
+        right_padding = half_crop - (width - pixel_x)
         right = width
     if lower == height:
-        lower_padding = half_x - (height - pixel_y)
+        lower_padding = half_crop - (height - pixel_y)
         lower = height
 
     cropped_image = image.crop((left, upper, right, lower))
 
     if left_padding > 0 or upper_padding > 0 or right_padding > 0 or lower_padding > 0:
-        padded_image = Image.new(image.mode, (x, x))
+        padded_image = Image.new(image.mode, (crop_size, crop_size))
         padded_image.paste(cropped_image, (left_padding, upper_padding))
         cropped_image = padded_image
 
@@ -215,17 +280,29 @@ def test_crop_image_around_pixel():
     plt.imshow(cropped_image)
     plt.show()
 
-def get_datasets(crop_size):
+def get_datasets(
+        crop_size: int
+        ):
 
-    movers, small_image_ids, big_image_ids = images_to_fetch(config.POSITION_PATH)
+    images_per_sequence = 4
+    movers, small_image_ids, big_image_ids = images_to_fetch(config.POS_MOVER_PATH, config.NEG_MOVER_PATH)
     movers = get_mover_labels(movers, config.MOVERS_PATH)
     print(len(movers))
 
-    small_image_set = fetch_small_images(small_image_ids, config.SMALL_IMAGE_PATH)
-    big_image_set, mover_positions = fetch_big_images(big_image_ids, movers, config.BIG_IMAGE_PATH)
-    #cropped_image_set = crop_images(big_image_set, mover_positions, crop_size)
+    small_image_set, movers_to_remove = fetch_small_images(small_image_ids, movers, config.SMALL_IMAGE_PATH)
+    cropped_image_set, mover_positions = fetch_cropped_images(big_image_ids, movers, movers_to_remove, config.BIG_IMAGE_PATH, config.POSITION_PATH, images_per_sequence, crop_size,)
 
-def get_loaders(image_shape, batch_size):
-    small_image_set, cropped_image_set, movers = get_datasets(image_shape[0])
+    return small_image_set, cropped_image_set
 
-test_crop_image_around_pixel()
+def get_loaders(
+    data_set: torch.utils.data.TensorDataset,
+    split: List[float] = [0.7, 0.3],
+    batch_size: int = 4,
+):
+    train_data_set, val_data_set = torch.utils.data.random_split(data_set, split)
+    train_loader = torch.utils.data.DataLoader(
+        train_data_set, batch_size=batch_size, shuffle=True
+    )
+    return train_loader, val_data_set
+
+get_datasets(100)
