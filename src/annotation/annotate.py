@@ -3,6 +3,7 @@ from tkinter import PhotoImage
 from glob import glob
 import csv
 import os
+import random
 
 # Initialize Tkinter root widget
 root = tk.Tk()
@@ -13,7 +14,7 @@ root.geometry("1600x900+0+0")
 
 # Load the 30x30 image
 images_path = glob("../../data/images/centered_on_asteroid/*")
-# images_path = sorted(images_path, reverse=True)
+random.shuffle(images_path)
 
 image_idx = 0
 image = PhotoImage(file=images_path[image_idx])
