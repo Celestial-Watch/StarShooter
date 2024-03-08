@@ -163,3 +163,5 @@ data/
 src/centered-on-asteroid/logs/
 src/centered-on-asteroid/model/
 .DS_Store
+settings.json
+.venv*
