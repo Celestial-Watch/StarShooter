@@ -49,7 +49,7 @@ sample_images = {
     3: "../../data/images/centered_on_asteroid/b0512238-2.png",
     4: "",
     5: "../../data/images/centered_on_asteroid/b0531793-1.png",
-    6: "",
+    6: "../../data/images/centered_on_asteroid/b0525660-1.png",
     7: "../../data/images/centered_on_asteroid/b0546729-2.png",
 }
 
