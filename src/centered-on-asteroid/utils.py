@@ -28,9 +28,19 @@ def get_dataframe(path_to_csvs: str) -> pd.DataFrame:
 def get_dataset(
     movers_agg: pd_typing.DataFrameGroupBy,
     path_to_images: str,
-    image_shape: tuple = (30, 30),
+    image_shape: Tuple[int, int] = (30, 30),
 ) -> Tuple[torch.utils.data.TensorDataset, List[str]]:
-    # Generate input, output pairs
+    """
+    Creates a dataset of (input, output) pairs.
+    Filters out movers that don't have 4 images or match the expected shape.
+
+    Args:
+        movers_agg (DataFrameGroupBy): The image entries of the data frame grouped by the mover they belong to.
+        path_to_images (str): Path to the image folder
+        image_shape (Tuple[int, int]): Desired image width and height.
+
+    Returns: Dataset and list of the mover ids that were actually used.
+    """
     x_tensors = []
     y_hat_tensors = []
     mover_ids = []
@@ -54,8 +64,13 @@ def get_dataset(
             transform = torchvision.transforms.ToTensor()
             image_tensor = transform(image)
 
+            if (
+                image_tensor.shape[0] != image_shape[0]
+                or image_tensor.shape[1] != image_shape[1]
+            ):
+                break
             # Reshape image tensor to match the expected input shape
-            image_tensor = image_tensor.view(1, 1, *image_shape)
+            image_tensor = image_tensor.view(1, 1, *(image_tensor.shape))
             image_tensors.append(image_tensor)
         else:
             # Loop finished without break
@@ -73,9 +88,20 @@ def get_dataset(
 
 def get_loaders(
     data_set: torch.utils.data.TensorDataset,
-    split: List[float] = [0.7, 0.3],
+    split: Tuple[float, float] = (0.7, 0.3),
     batch_size: int = 4,
-):
+) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.TensorDataset]:
+    """
+    Splits the data into training and validation data and turns the training data into a data loader.
+
+    Args:
+        data_set (TensorDataset): Torch Dataset consisting of (input, output) pairs
+        split (Tuple[float, float]): Percentage used for training and validation. Should sum to 1.
+        batch_size (int): Batch size used for the training loader.
+
+    Returns: Training data loader and validation dataset
+    """
+
     train_data_set, val_data_set = torch.utils.data.random_split(data_set, split)
     train_loader = torch.utils.data.DataLoader(
         train_data_set, batch_size=batch_size, shuffle=True
