@@ -184,7 +184,7 @@ if __name__ == "__main__":
     path_to_data = os.path.abspath("./../../scripts/data")
     real_movers_file = f"{path_to_data}/csv/csv/movers_cond_12_image_meta_data.csv"
     bogus_movers_file = f"{path_to_data}/csv/csv/movers_cond_2_image_meta_data.csv"
-    images_folder = f"{path_to_data}/30x30_images/"
+    images_folder = f"{path_to_data}/images/centered_on_asteroid/"
     movers_agg = get_dataframe(real_movers_file, bogus_movers_file)
     data_set, mover_ids = get_dataset(movers_agg, images_folder)
 

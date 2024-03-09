@@ -6,7 +6,6 @@ from PIL import Image
 import torchvision
 from typing import Tuple
 import math
-import numpy as np
 
 x_cord = "pos_RightAscension"
 y_cord = "pos_Declination"
@@ -29,6 +28,16 @@ class CustomDataset(torch.utils.data.Dataset):
 def get_position_tensor(
     movers_agg: pd_typing.DataFrameGroupBy,
 ) -> torch.Tensor:
+    """
+    Get the position of each of the images.
+    The global variables x_cord and y_cord decide which dataframe column to use for the position information.
+    I recommend using Right Ascension and Declination as it shows the movement in sky.
+
+    Args:
+        movers_agg (DataFrameGroupBy): Dataframe for all the images grouped by the mover they belong to. Should be pre-filtered to only contain movers with 4 images that have all the position data.
+
+    Returns: List of dx, dy's of positions between the images for each mover. (n, 6)
+    """
     movers_positions = []
     for mover_id, group_data in movers_agg:
         mover_positions = []
