@@ -334,8 +334,6 @@ def get_dataset(
             y_hat_tensors.append(torch.Tensor([[group_data["label"].iloc[0]]]))
             mover_ids.append(mover_id)
 
-    print(x_tensors)
-
     x = torch.concat(x_tensors)
     y_hat = torch.concat(y_hat_tensors)
 
