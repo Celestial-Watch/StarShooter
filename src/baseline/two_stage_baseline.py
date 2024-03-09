@@ -3,7 +3,6 @@ import torch
 from torchvision.models import resnet18, ResNet18_Weights
 from typing import Tuple
 
-PATH = ""
 
 class TwoStage(nn.Module):
 
@@ -11,11 +10,11 @@ class TwoStage(nn.Module):
         images_per_sequence: int,
         no_classes: int,
         image_shape: Tuple[int, int],
+        stage_1: nn.Module
         ):
 
         super(TwoStage, self).__init__()
-        self.stage1 = Stage1(images_per_sequence, no_classes, image_shape)
-        self.stage1.load_state_dict(torch.load(PATH))
+        self.stage1 = stage_1
         self.stage1.eval()
         self.stage2 = MLP()
 

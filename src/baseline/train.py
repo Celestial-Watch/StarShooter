@@ -11,7 +11,7 @@ import sys
 from two_stage_baseline import Stage1, MLP, TwoStage
 from torch.utils import tensorboard
 from typing import Tuple
-from utils import get_dataframe, get_dataset, get_loaders
+from utils import get_dataframe, get_dataset, get_loaders, get_dataset_stage1
 
 
 def load_data(data_path) -> DataLoader:
@@ -167,36 +167,25 @@ def report_performance(
 
 if __name__ == '__main__':
 
-    input_dim = (100,100)
+    input_dim = (30,30)
 
     # Load data
-    path_to_data = os.path.abspath("./../../data/images") + "/"
+    path_to_data = os.path.abspath("./../processing/data/alistair/30x30_images") + "/"
     movers_agg = get_dataframe(path_to_data + "csv/")
-    data_set, _ = get_dataset(movers_agg, path_to_data + "images/100x100_images/", image_shape=input_dim)
-    train_loader, val_loader = get_loaders(data_set)
-
-    transform = transforms.Compose([
-        transforms.Resize((224, 224)),
-        transforms.ToTensor(),
-        transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))
-    ])
-
-    # Load dataset
-    dataset = train_loader.dataset
-    transformed_dataset = copy.deepcopy(dataset)
-    transformed_dataset.transform = transform
-
-    train_loader = DataLoader(transformed_dataset, batch_size=4, shuffle=True)
+    dataset_stage1, _ = get_dataset_stage1(movers_agg, path_to_data + "images/30x30_images/", image_shape=input_dim)
+    train_loader_stage1, val_loader_stage1 = get_loaders(dataset_stage1)
 
     loss = nn.CrossEntropyLoss()
 
 
-    if sys.argv[1] == 'stage1':
-        model = Stage1(4, 8, input_dim)
-        optimiser = optim.Adam(model.parameters(), lr=0.001, momentum=0.9)
-        model = train(model, train_loader, val_loader, loss, optimiser, 100, "stage1")
+    stage1 = Stage1(4, 8, input_dim)
+    optimiser = optim.Adam(stage1.parameters(), lr=0.001, momentum=0.9)
+    stage1 = train(stage1, train_loader_stage1, val_loader_stage1, loss, optimiser, 100, "stage1")
 
-    else:
-        model = TwoStage(4, 8, input_dim)
-        optimiser = optim.Adam(model.parameters(), lr=0.001, momentum=0.9)
-        model = train(model, train_loader, val_loader, loss, optimiser, 100, "stage1", True)
+    dataset_stage2 = get_dataset(movers_agg, path_to_data + "images/30x30_images/", image_shape=input_dim)
+    train_loader, val_loader = get_loaders(dataset_stage2)
+
+
+    model = TwoStage(4, 8, input_dim)
+    optimiser2 = optim.Adam(model.parameters(), lr=0.001, momentum=0.9)
+    model = train(model, train_loader, val_loader, loss, optimiser2, 100, "stage1", True)

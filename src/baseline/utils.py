@@ -53,6 +53,8 @@ def get_dataset(
             # Convert PIL Image to torch.Tensor
             transform = torchvision.transforms.ToTensor()
             image_tensor = transform(image)
+            # Resize the image to 224 x 224 pixels
+            image_tensor = torchvision.transforms.functional.resize(image_tensor, (224, 224))
 
             # Reshape image tensor to match the expected input shape
             image_tensor = image_tensor.view(1, 1, *image_shape)
@@ -69,6 +71,56 @@ def get_dataset(
     y_hat = torch.concat(y_hat_tensors)
     data_set = torch.utils.data.TensorDataset(x, y_hat)
     return data_set, mover_ids
+
+
+def get_dataset_stage1(
+    movers_agg: pd_typing.DataFrameGroupBy,
+    path_to_images: str,
+    image_shape: tuple = (30, 30),
+) -> Tuple[torch.utils.data.TensorDataset, List[str]]:
+    
+     # Generate input, output pairs
+    x_tensors = []
+    y_hat_tensors = []
+    mover_ids = []
+    for mover_id, group_data in movers_agg:
+        image_tensors = []
+        # Ignore sequences that aren't 4 images long
+        if len(group_data) != 4:
+            print(f"Skipping {mover_id} sequence with length: {len(group_data)}")
+            continue
+
+        for _, row in group_data.iterrows():
+            image_path = path_to_images + row["file_name"]
+            try:
+                # Read image as PIL Image and convert to grayscale
+                image = Image.open(image_path).convert("L")
+            except FileNotFoundError:
+                print(f"Image of {mover_id} not found: {image_path}")
+                break
+
+            # Convert PIL Image to torch.Tensor
+            transform = torchvision.transforms.ToTensor()
+            image_tensor = transform(image)
+            # Resize the image to 224 x 224 pixels
+            image_tensor = torchvision.transforms.functional.resize(image_tensor, (224, 224))
+
+            # Reshape image tensor to match the expected input shape
+            image_tensor = image_tensor.view(1, 1, *image_shape)
+            image_tensors.append(image_tensor)
+        else:
+            # Loop finished without break
+            # Concatenate over width dimension -> (1, 1, 120, 30)
+            x_tensors.append(image_tensors)
+            y_hat_tensors.append(torch.tensor([group_data["label"].iloc[0] * 4]))
+            mover_ids.append(mover_id)
+
+    x = torch.concat(x_tensors)
+    y_hat = torch.concat(y_hat_tensors)
+    data_set = torch.utils.data.TensorDataset(x, y_hat)
+    return data_set, mover_ids
+
+    
 
 
 def get_loaders(
