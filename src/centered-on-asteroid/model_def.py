@@ -68,15 +68,37 @@ class DynamicCNN(nn.Module):
 
 # Convolutional Neural Network
 class CNN(nn.Module):
-    def __init__(self, output_size: int):
+    """
+    Convolutional Neural Network that takes in an image and produces a feature vector.
+    """
+
+    def __init__(self, output_size: int, image_shape: Tuple[int, int]):
+        """
+        Args:
+            output_size (int): The number of outputs
+            image_shape (Tuple[int, int]): Shape of the input image
+        """
         super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=1, padding=1)
+        n_channels_1 = 16
+        n_channels_2 = 32
+        final_layer_size = (
+            n_channels_2 * (image_shape[0] // 2 // 2) * (image_shape[1] // 2 // 2)
+        )
+        self.conv1 = nn.Conv2d(1, n_channels_1, kernel_size=3, stride=1, padding=1)
         self.relu = nn.ReLU()
         self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv2 = nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1)
-        self.fc = nn.Linear(32 * 7 * 7, output_size)
+        self.conv2 = nn.Conv2d(
+            n_channels_1, n_channels_2, kernel_size=3, stride=1, padding=1
+        )
+        self.fc = nn.Linear(final_layer_size, output_size)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): Imaege of shape (n, 1, image_shape[0], image_shape[1])
+
+        Returns: torch.Tensor of size (n, output_size)
+        """
         x = self.conv1(x)
         x = self.relu(x)
         x = self.maxpool(x)
@@ -90,12 +112,22 @@ class CNN(nn.Module):
 
 # Convolutional Fusion Network
 class CFN(nn.Module):
+    """
+    Neural Network that takes in a set of images and predicts whether they represent an asteroid.
+    """
+
     def __init__(
         self,
         images_per_sequence: int,
         feature_vector_size: int,
         image_shape: Tuple[int, int],
     ):
+        """
+        Args:
+            images_per_sequence (int): Number of images per sequence
+            feature_vector_size (int): Size of the hidden representation
+            image_shape (Tuple[int, int]): Width and height of the individual images
+        """
         super(CFN, self).__init__()
         self.image_shape = image_shape
         self.images_per_sequence = images_per_sequence
@@ -106,6 +138,12 @@ class CFN(nn.Module):
         self.merge = nn.Linear(images_per_sequence * feature_vector_size, 1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        Args:
+            x (torch.Tensor): Concatenated images of shape (n, 1, images_per_sequence * image_shape[0], image_shape[1])
+
+            Returns: Prediction for the asteroid candidate(s) (n, 1)
+        """
         # The input is the concatenation of the images, split back into individual images
         images = torch.split(x, self.image_shape[0], dim=2)
         feature_vectors = [self.cnn(image) for image in images]
@@ -169,6 +207,8 @@ class MCFN(nn.Module):
 
         images: Concatenated images of shape (n, 1, images_per_sequence * image_shape[0], image_shape[1])
         metadata: Metadata of shape (n, metadata_size)
+
+        Returns: Prediction for the asteroid candidate(s) (n, 1)
         """
         images, metadata = x
         # Images is the concatenation of the images, split back into individual images
