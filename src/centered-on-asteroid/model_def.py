@@ -18,8 +18,11 @@ class CNN(nn.Module):
         super(CNN, self).__init__()
         n_channels_1 = 16
         n_channels_2 = 32
+        n_pooling_blocks = 2
         final_layer_size = (
-            n_channels_2 * (image_shape[0] // 2 // 2) * (image_shape[1] // 2 // 2)
+            n_channels_2
+            * (image_shape[0] // (2 * n_pooling_blocks))
+            * (image_shape[1] // (2 * n_pooling_blocks))
         )
         self.conv1 = nn.Conv2d(1, n_channels_1, kernel_size=3, stride=1, padding=1)
         self.relu = nn.ReLU()
