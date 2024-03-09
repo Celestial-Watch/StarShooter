@@ -39,9 +39,9 @@ if __name__ == "__main__":
     expirement_name = f"end-to-end-{engineered_features}"
 
     # Load data
-    path_to_data = os.path.abspath("./../../data/")
-    real_movers_file = f"{path_to_data}/csv/movers_cond_12_image_meta_data.csv"
-    bogus_movers_file = f"{path_to_data}/csv/movers_cond_2_image_meta_data.csv"
+    path_to_data = os.path.abspath("./../../scripts/data/")
+    real_movers_file = f"{path_to_data}/csv/csv/movers_cond_12_image_meta_data.csv"
+    bogus_movers_file = f"{path_to_data}/csv/csv/movers_cond_2_image_meta_data.csv"
     images_folder = f"{path_to_data}/images/centered_on_asteroid/"
     movers_agg = get_dataframe(real_movers_file, bogus_movers_file)
     data_set, mover_ids = get_dataset(movers_agg, images_folder)
@@ -51,11 +51,13 @@ if __name__ == "__main__":
         lambda x: any(x["mover_id"].isin(mover_ids))
     ).groupby("mover_id")
     metadata = get_position_tensor(movers_agg)
+    print(f"Metadata: {metadata}")
     extra_features = get_engineered_features(metadata, engineered_features)
 
     data_set = CustomDataset(data_set.tensors[0], extra_features, data_set.tensors[1])
 
     metadata_size = len(extra_features[0])
+    print(f"Metadata size: {metadata_size}")
     model = model_def.MCFN(
         images_per_sequence, feature_vector_size, image_shape, metadata_size
     )

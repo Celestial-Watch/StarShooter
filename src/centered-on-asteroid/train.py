@@ -150,15 +150,149 @@ def train(
 
 def get_experiment_args():
     parser = ArgumentParser()
-    parser.add_argument("--image_shape", type=int, nargs=2, default=(30, 30))
-    parser.add_argument("--images_per_sequence", type=int, default=4)
-    parser.add_argument("--feature_vector_size", type=int, default=10)
-    parser.add_argument("--loss", type=str, default="BCELoss")
-    parser.add_argument("--optimizer", type=str, default="Adam")
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--batch_size", type=int, default=4)
-    parser.add_argument("--experiment_name", type=str, default="end-to-end")
-    parser.add_argument("--metadata", type=str, default="None")
+    # Model parameters
+    # CNN parameters
+    parser.add_argument(
+        "--image_shape",
+        type=int,
+        nargs=2,
+        default=(30, 30),
+        help="The shoud be a tuple of the form (width, height) with both values being integers.",
+    )
+    parser.add_argument(
+        "--images_per_sequence",
+        type=int,
+        default=4,
+        help="The number of asteroid images per sequence (default 4).",
+    )
+    parser.add_argument(
+        "--feature_vector_size",
+        type=int,
+        default=10,
+        help="The output (feature vector) size of the CNN (default 10).",
+    )
+
+    parser.add_argument(
+        "--num_conv_blocks",
+        type=int,
+        default=2,
+        help="The number of convolutional blocks in the CNN (default 2).",
+    )
+
+    parser.add_argument(
+        "--conv_filters_list",
+        type=str,
+        default="16,32",
+        help="The number of filters in each convolutional block (default '16,32'). There should be num_conv_blocks separated by commas.",
+    )
+
+    parser.add_argument(
+        "--conv_kernel_sizes",
+        type=int,
+        default=3,
+        help="The kernel size of the convolutional layers (default 3).",
+    )
+
+    parser.add_argument(
+        "--conv_strides",
+        type=int,
+        default=1,
+        help="The stride of the convolutional layers (default 1).",
+    )
+
+    parser.add_argument(
+        "--conv_padding",
+        type=int,
+        default=1,
+        help="The padding of the convolutional layers (default 1).",
+    )
+
+    # MLP parameters
+
+    parser.add_argument(
+        "--num_hidden_mlp_layers",
+        type=int,
+        default=2,
+        help="The number of hidden layers in MLP (default 2).",
+    )
+
+    parser.add_argument(
+        "--hidden_mlp_size",
+        type=int,
+        default=64,
+        help="The size of the hidden layers in MLP (default 64).",
+    )
+    # Hyperparameters
+    parser.add_argument(
+        "--loss",
+        type=str,
+        default="BCELoss",
+        help="The loss function to use (Default BCELoss). Choices are: CrossEntropyLoss, NLLLoss, BCELoss, BCEWithLogitsLoss, MultiLabelSoftMarginLoss, MultiMarginLoss, SoftMarginLoss.",
+    )
+    parser.add_argument(
+        "--optimizer",
+        type=str,
+        default="Adam",
+        help="The optimizer to use (Default Adam).",
+    )
+    parser.add_argument(
+        "--epochs",
+        type=int,
+        default=10,
+        help="Total number of epochs to train for (default 10).",
+    )
+    parser.add_argument(
+        "--batch_size", type=int, default=4, help="Batch size (default 4)."
+    )
+    parser.add_argument(
+        "--experiment_name",
+        type=str,
+        default="end-to-end",
+        help="Name of the experiment (This will be combined with a timestamp to create a unique identifier). Default is 'end-to-end'.",
+    )
+
+    # Data
+    parser.add_argument(
+        "--metadata",
+        type=str,
+        default="no_metadata",
+        help="Metadata to use. Default is 'no_metadata'. Choices are: 'no_metadata', 'max_grad_diff', 'max_ang_diff', 'max_movement_vector_distance', 'max_movement_vector_distance_normalised', 'gradients', 'angles', 'movement_vectors'.",
+    )
+    parser.add_argument(
+        "--data_path",
+        type=str,
+        default="./../../scripts/data",
+        help="Path to the data folder.",
+    )
+
+    parser.add_argument(
+        "--images_folder",
+        type=str,
+        default="/images/centered_on_asteroid",
+        help="Path to the images folder. This will use the data_path as the root. Default is '/images/centered_on_asteroid'.",
+    )
+
+    parser.add_argument(
+        "--real_movers_file",
+        type=str,
+        default="/csv/movers_cond_12_image_meta_data.csv",
+        help="Path to the real movers file. This will use the data_path as the root. Default is '/csv/movers_cond_12_image_meta_data.csv'.",
+    )
+
+    parser.add_argument(
+        "--bogus_movers_file",
+        type=str,
+        default="/csv/movers_cond_2_image_meta_data.csv",
+        help="Path to the bogus movers file. This will use the data_path as the root. Default is '/csv/movers_cond_2_image_meta_data.csv'.",
+    )
+
+    # Add in future file system (where the movers are all stored in one file)
+    parser.add_argument(
+        "--movers_file",
+        type=str,
+        default="/csv/movers.csv",
+        help="Path to the (all) movers file. This will use the data_path as the root. Default is '/csv/movers.csv'.",
+    )
     return parser.parse_args()
 
 
@@ -179,36 +313,50 @@ if __name__ == "__main__":
     images_per_sequence = args.images_per_sequence
     feature_vector_size = args.feature_vector_size
 
-    # Load data
-    # Ignore weird paths for now
-    path_to_data = os.path.abspath("./../../scripts/data")
-    real_movers_file = f"{path_to_data}/csv/csv/movers_cond_12_image_meta_data.csv"
-    bogus_movers_file = f"{path_to_data}/csv/csv/movers_cond_2_image_meta_data.csv"
-    images_folder = f"{path_to_data}/images/centered_on_asteroid/"
+    # CNN parameters
+    num_conv_blocks = args.num_conv_blocks
+    conv_filters_list = list(map(int, args.conv_filters_list.split(",")))
+    conv_kernel_sizes = args.conv_kernel_sizes
+    conv_strides = args.conv_strides
+    conv_padding = args.conv_padding
+
+    # MLP parameters
+    num_hidden_mlp_layers = args.num_hidden_mlp_layers
+    hidden_mlp_size = args.hidden_mlp_size
+
+    # Load data -- comes from parsed args
+    path_to_data = args.data_path
+    real_movers_file = os.path.join(path_to_data, args.real_movers_file)
+    bogus_movers_file = os.path.join(path_to_data, args.bogus_movers_file)
+    images_folder = os.path.join(path_to_data, args.images_folder)
     movers_agg = get_dataframe(real_movers_file, bogus_movers_file)
     data_set, mover_ids = get_dataset(movers_agg, images_folder)
 
     # Metadata
-    metadata = args.metadata
-    if metadata != "None":
-        # Get engineered features -- TODO: Add other metadata options
-        engineered_features = "positions"
-        movers_agg = movers_agg.filter(
-            lambda x: any(x["mover_id"].isin(mover_ids))
-        ).groupby("mover_id")
-        metadata = get_position_tensor(movers_agg)
-        extra_features = get_engineered_features(metadata, engineered_features)
+    engineered_features = args.metadata
+    # Filter out the movers that we do not have downloaded images for
+    movers_agg = movers_agg.filter(
+        lambda x: any(x["mover_id"].isin(mover_ids))
+    ).groupby("mover_id")
+    metadata = get_position_tensor(movers_agg)
+    extra_features = get_engineered_features(metadata, engineered_features)
 
-        data_set = CustomDataset(
-            data_set.tensors[0], extra_features, data_set.tensors[1]
-        )
+    data_set = CustomDataset(data_set.tensors[0], extra_features, data_set.tensors[1])
 
-        metadata_size = len(extra_features[0])
-        model = model_def.MCFN(
-            images_per_sequence, feature_vector_size, image_shape, metadata_size
-        )
-    else:
-        model = model_def.CFN(images_per_sequence, feature_vector_size, image_shape)
+    metadata_size = len(extra_features[0])
+    model = model_def.DynamicCFN(
+        images_shape=image_shape,
+        num_conv_blocks=num_conv_blocks,
+        conv_filters_list=conv_filters_list,
+        conv_kernel_sizes=conv_kernel_sizes,
+        conv_strides=conv_strides,
+        conv_padding=conv_padding,
+        feature_vector_output_size=feature_vector_size,
+        images_per_sequence=images_per_sequence,
+        metadata_size=metadata_size,
+        num_hidden_mlp_layers=num_hidden_mlp_layers,
+        hidden_mlp_size=hidden_mlp_size,
+    )
 
     # Training parameters
     loss = classification_loss_functions[args.loss]

@@ -36,7 +36,7 @@ def get_position_tensor(
     Args:
         movers_agg (DataFrameGroupBy): Dataframe for all the images grouped by the mover they belong to. Should be pre-filtered to only contain movers with 4 images that have all the position data.
 
-    Returns: List of dx, dy's of positions between the images for each mover. (n, 6)
+    Returns: List of x, y's of positions between the images for each mover. (n, 8)
     """
     movers_positions = []
     for mover_id, group_data in movers_agg:
@@ -52,7 +52,7 @@ def get_position_tensor(
 
 
 def get_engineered_features(
-    movers_positions: torch.Tensor, type: str = "max_grad_diff"
+    movers_positions: torch.Tensor, type_: str = "max_grad_diff"
 ) -> torch.Tensor:
     """
 
@@ -62,7 +62,7 @@ def get_engineered_features(
 
     Returns: The engineered features for the given type (n, z), where z is the feature vector size
     """
-    match type:
+    match type_:
         case "no_metadata":
             return torch.full((len(movers_positions), 1), 0)
         case "max_grad_diff":
@@ -110,7 +110,7 @@ def get_engineered_features(
         case "positions":
             return movers_positions
         case _:
-            raise ValueError(f"Invalid type: {type}")
+            raise ValueError(f"Invalid type: {type_}")
 
 
 def get_max_movement_vector_distance(
@@ -333,6 +333,8 @@ def get_dataset(
             x_tensors.append(x_tensor)
             y_hat_tensors.append(torch.Tensor([[group_data["label"].iloc[0]]]))
             mover_ids.append(mover_id)
+
+    print(x_tensors)
 
     x = torch.concat(x_tensors)
     y_hat = torch.concat(y_hat_tensors)
