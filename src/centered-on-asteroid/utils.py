@@ -7,9 +7,15 @@ import torchvision
 from typing import Tuple
 
 
-def get_dataframe(path_to_csvs: str) -> pd.DataFrame:
+def get_dataframe(path_to_csvs: str) -> pd_typing.DataFrameGroupBy:
     """
-    Returns a DataFrame object grouped by the mover_id with columns file_name and label
+    Reads in a list of bogus movers and a list of real movers and combines them into a dataset while adding a label column.
+    Also aggregates the dataframe by mover id.
+
+    Args:
+        path_to_csvs (str): Path to the csv folder
+
+    Returns: Aggregated dataframe by mover id.
     """
     # Read csv
     real_movers = pd.read_csv(path_to_csvs + "movers_images_lookup.csv")
