@@ -43,13 +43,9 @@ class MLP(nn.Module):
 
 class Stage1(nn.Module):
     def __init__(self,
-        images_per_sequence: int,
         no_classes: int,
-        image_shape: Tuple[int, int],
         ):
-        super(Stage1, self).__init__()
-        self.image_shape = image_shape
-        self.images_per_sequence = images_per_sequence
+        super(Stage1, self).__init__()     
         self.no_classes = no_classes
         self.resnet = ResNetClassifer(no_classes)
 
