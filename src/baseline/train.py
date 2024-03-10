@@ -178,7 +178,7 @@ if __name__ == '__main__':
     loss = nn.CrossEntropyLoss()
 
 
-    stage1 = Stage1(4, 8, input_dim)
+    stage1 = Stage1(no_classes=8)
     optimiser = optim.Adam(stage1.parameters(), lr=0.001, momentum=0.9)
     stage1 = train(stage1, train_loader_stage1, val_loader_stage1, loss, optimiser, 100, "stage1")
 
@@ -186,6 +186,6 @@ if __name__ == '__main__':
     train_loader, val_loader = get_loaders(dataset_stage2)
 
 
-    model = TwoStage(4, 8, input_dim)
+    model = TwoStage(stage1)
     optimiser2 = optim.Adam(model.parameters(), lr=0.001, momentum=0.9)
     model = train(model, train_loader, val_loader, loss, optimiser2, 100, "stage1", True)

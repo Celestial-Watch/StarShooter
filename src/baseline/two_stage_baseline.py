@@ -7,9 +7,6 @@ from typing import Tuple
 class TwoStage(nn.Module):
 
     def __init__(self,
-        images_per_sequence: int,
-        no_classes: int,
-        image_shape: Tuple[int, int],
         stage_1: nn.Module
         ):
 
