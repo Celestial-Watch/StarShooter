@@ -14,17 +14,6 @@ from typing import Tuple
 from utils import get_dataframe, get_dataset, get_loaders, get_dataset_stage1
 
 
-def load_data(data_path) -> DataLoader:
-    # Define transformations
-    
-
-    # Define DataLoader
-    dataloader = DataLoader(dataset, batch_size=15, shuffle=True)
-
-    return dataloader
-
-
-
 
 def train(model: nn.Module,
     training_loader: torch.utils.data.DataLoader,
@@ -175,7 +164,7 @@ if __name__ == '__main__':
     dataset_stage1, _ = get_dataset_stage1(movers_agg, path_to_data + "images/30x30_images/", image_shape=input_dim)
     train_loader_stage1, val_loader_stage1 = get_loaders(dataset_stage1)
 
-    loss = nn.CrossEntropyLoss()
+    loss = nn.BCELoss()
 
 
     stage1 = Stage1(no_classes=8)
