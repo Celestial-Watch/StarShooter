@@ -56,6 +56,7 @@ def fetch_small_images(
     # Determine the dimensions of the input array
 
     rows, cols = small_image_ids.shape
+    print(f"{small_image_ids.shape}")
     
     # Initialize an empty array with the same dimensions to store the NumPy arrays of images
     images = np.empty((rows, cols), dtype=object)
@@ -108,6 +109,9 @@ def fetch_small_images(
     x = torch.concat(x_tensors)
     y_hat = torch.concat(y_hat_tensors)
     data_set = torch.utils.data.TensorDataset(x, y_hat)
+    # print(f"Data shape: {x.shape}")
+    # print(f"Label shape: {y_hat.shape}")
+    # print(f"data_set shape: {data_set.shape}")
     print("Full sets not found for {} movers".format(len(movers_to_remove)))
     movers = movers[~movers['mover_id'].isin(movers_to_remove)]
 
@@ -247,14 +251,14 @@ def get_datasets(
     movers, small_image_ids, big_image_ids, mover_positions = images_to_fetch(config.POS_MOVER_PATH, config.NEG_MOVER_PATH)
 
     
-    cropped_image_set, _, movers = fetch_cropped_images(
-        big_image_ids, 
-        movers, 
-        config.BIG_IMAGE_PATH, 
-        mover_positions, 
-        images_per_sequence, 
-        crop_size,
-        )
+    # cropped_image_set, _, movers = fetch_cropped_images(
+    #     big_image_ids, 
+    #     movers, 
+    #     config.BIG_IMAGE_PATH, 
+    #     mover_positions, 
+    #     images_per_sequence, 
+    #     crop_size,
+    #     )
 
     small_image_set, _ = fetch_small_images(
         small_image_ids, 
@@ -262,7 +266,7 @@ def get_datasets(
         config.SMALL_IMAGE_PATH
         )
 
-    return small_image_set, cropped_image_set
+    return small_image_set#, cropped_image_set
 
 def get_loaders(
     data_set: torch.utils.data.TensorDataset,
@@ -275,5 +279,5 @@ def get_loaders(
     )
     return train_loader, val_data_set
 
-
-get_datasets(100)
+if __name__ == '__main__':
+    get_datasets(100)

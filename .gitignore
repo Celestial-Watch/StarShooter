@@ -165,3 +165,5 @@ src/centered-on-asteroid/model/
 .vscode/
 logs/*
 model/*
+src/processing/logs
+src/processing/model

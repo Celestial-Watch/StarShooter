@@ -17,7 +17,7 @@ def train_one_epoch(
     criterion: nn.modules.loss._Loss,
     training_loader: torch.utils.data.DataLoader,
     optimizer: torch.optim.Optimizer,
-    window_size: int = 10,
+    window_size: int = 60,
 ):
     running_loss = 0.0
     last_loss = 0.0
@@ -29,7 +29,6 @@ def train_one_epoch(
         optimizer.zero_grad()  # reset
         preds = model(inputs)
 
-        print(preds[0], labels[0])
 
         # Compute the loss and its gradients
         loss = criterion(preds, labels.float())
@@ -39,7 +38,7 @@ def train_one_epoch(
         optimizer.step()
 
         # Gather data and report
-        running_loss += loss.item() * inputs.size(0)
+        running_loss += loss.item()
         if i % window_size == window_size - 1:
             last_loss = running_loss / window_size  # loss per batch
 
@@ -155,15 +154,16 @@ if __name__ == "__main__":
 
     # Training parameters
     loss = torch.nn.BCELoss()
-    optimizer1 = torch.optim.Adam(model1.parameters())
+    optimizer1 = torch.optim.Adam(model1.parameters(), lr = 5e-4)
     optimizer2 = torch.optim.Adam(model2.parameters())
-    epochs = 1000
-    batch_size = 4
+    epochs = 100
+    batch_size = 20
     experiment1 = "smol_image"
     experiment2 = "big_image"
 
     # Load data
-    small_image_set, big_image_set = get_datasets(crop_size)
+    small_image_set = get_datasets(crop_size)
+    # small_image_set, big_image_set = get_datasets(crop_size)
 
     train_loader1, val_loader1 = get_loaders(small_image_set, batch_size=batch_size)
     # train_loader2, val_loader2 = get_loaders(big_image_set, batch_size=batch_size)

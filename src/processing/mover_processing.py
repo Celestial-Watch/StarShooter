@@ -10,8 +10,8 @@ if neg:
     add = "rejected_"
 
 # Read the CSV file
-df = pd.read_csv(config.PROCESSING_PATH + '/data/alistair/new/'+add+'movers_metadata_new.csv')
-movers_pos_df = pd.read_csv(config.PROCESSING_PATH + '/data/alistair/new/'+add+'movers_small_images.csv')
+df = pd.read_csv(config.PROCESSING_PATH + '/data/alistair/'+add+'movers_metadata.csv')
+movers_pos_df = pd.read_csv(config.PROCESSING_PATH + '/data/alistair/'+add+'movers_images_lookup.csv')
 
 # Count the occurrences of each Name value
 name_counts = df['Name'].value_counts()
@@ -51,6 +51,8 @@ selected_df = selected_df[
     selected_df['Seq_no_big'] == (selected_df['Seq_no_small']) 
     ].drop('Seq_no_small', axis = 1).drop('Seq_no_big', axis = 1).drop('FileName', axis = 1)
 
+# Delete Duplicate rows
+selected_df = selected_df.drop_duplicates()
 
 
 # Save the filtered dataframe to a CSV file
