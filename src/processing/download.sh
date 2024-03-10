@@ -1,7 +1,7 @@
 # Set the GCP bucket and folder path
 BUCKET_NAME="mlp-asteroid-data"
-FOLDER_PATH="30x30_images/"
-DOWNLOAD_FOLDER="data/alistair/30x30_images"
+FOLDER_PATH="alistair/images/"
+DOWNLOAD_FOLDER="data/alistair/images"
 
 # Create the download folder
 mkdir -p ${DOWNLOAD_FOLDER}

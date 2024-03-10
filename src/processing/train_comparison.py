@@ -17,7 +17,7 @@ def train_one_epoch(
     criterion: nn.modules.loss._Loss,
     training_loader: torch.utils.data.DataLoader,
     optimizer: torch.optim.Optimizer,
-    window_size: int = 50,
+    window_size: int = 10,
 ):
     running_loss = 0.0
     last_loss = 0.0
@@ -29,6 +29,8 @@ def train_one_epoch(
         optimizer.zero_grad()  # reset
         preds = model(inputs)
 
+        print(preds[0], labels[0])
+
         # Compute the loss and its gradients
         loss = criterion(preds, labels.float())
         loss.backward()
@@ -37,7 +39,7 @@ def train_one_epoch(
         optimizer.step()
 
         # Gather data and report
-        running_loss += loss.item()
+        running_loss += loss.item() * inputs.size(0)
         if i % window_size == window_size - 1:
             last_loss = running_loss / window_size  # loss per batch
 
@@ -146,7 +148,7 @@ if __name__ == "__main__":
     image_shape1 = 30
     image_shape2 = 100
     crop_size = image_shape2
-    images_per_sequence = 3
+    images_per_sequence = 4
 
     model1 = channel_model.ChannelResNet()
     model2 = channel_model.ChannelResNet()
@@ -155,18 +157,16 @@ if __name__ == "__main__":
     loss = torch.nn.BCELoss()
     optimizer1 = torch.optim.Adam(model1.parameters())
     optimizer2 = torch.optim.Adam(model2.parameters())
-    epochs = 100
+    epochs = 1000
     batch_size = 4
     experiment1 = "smol_image"
     experiment2 = "big_image"
 
     # Load data
-    path_to_data = os.path.abspath("./../../data/") + "/"
-
     small_image_set, big_image_set = get_datasets(crop_size)
 
     train_loader1, val_loader1 = get_loaders(small_image_set, batch_size=batch_size)
-    train_loader2, val_loader2 = get_loaders(big_image_set, batch_size=batch_size)
+    # train_loader2, val_loader2 = get_loaders(big_image_set, batch_size=batch_size)
 
     print(f"Training on {len(train_loader1) * batch_size} samples.")
     model1 = train(
@@ -178,12 +178,12 @@ if __name__ == "__main__":
         epochs,
         experiment1,
     )
-    model2 = train(
-        model2,
-        train_loader2,
-        val_loader2,
-        loss,
-        optimizer2,
-        epochs,
-        experiment2,
-    )
+    # model2 = train(
+    #     model2,
+    #     train_loader2,
+    #     val_loader2,
+    #     loss,
+    #     optimizer2,
+    #     epochs,
+    #     experiment2,
+    # )
