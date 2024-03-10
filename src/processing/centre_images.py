@@ -150,7 +150,7 @@ def fetch_cropped_images(
                 # Read image as PIL Image and convert to grayscale
                 image_full_path = f"{image_path}{image_id}.png"
                 image = Image.open(image_full_path).convert("L")
-            except FileNotFoundError:
+            except Exception as e:
                 movers_to_remove.append(mover_id)
                 images_not_found.append(image_id)
                 break

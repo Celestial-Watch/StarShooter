@@ -19,7 +19,7 @@ name_counts = df['Name'].value_counts()
 # Filter the dataframe to include only the entries where Name appears four times
 filtered_df = df[df['Name'].isin(name_counts[name_counts == 4].index)]
 # Select the desired columns from the filtered dataframe
-selected_df = filtered_df[['Link', 'X', 'Y', 'Name']]
+selected_df = filtered_df[['Link','FileName', 'X', 'Y', 'Name']]
 
 # Apply regex to extract the id from the filename
 selected_df['image_id'] = selected_df['Link'].apply(lambda x: re.search(r'(\d+)', x).group(1))
@@ -33,10 +33,23 @@ selected_df = selected_df.merge(movers_pos_df, left_on='Name', right_on='mover_i
 # Drop any rows with empty values
 selected_df.dropna(inplace=True)
 
-selected_df['Seq_no'] = selected_df['centred_image_id'].apply(lambda x: int(re.search(r'\-(\d+)\.png$', x).group(1)))
+def convert_to_order(x):
+    if x == 'A':
+        return 1
+    if x == 'B':
+        return 2
+    if x == 'C':
+        return 3
+    if x == 'D':
+        return 4
+    return -1
 
-selected_df['Occurrence'] = selected_df.groupby('centred_image_id').cumcount()
-selected_df = selected_df[selected_df['Occurrence'] == (selected_df['Seq_no'] - 1) ].drop('Seq_no', axis = 1).drop('Occurrence', axis = 1)
+selected_df['Seq_no_small'] = selected_df['centred_image_id'].apply(lambda x: int(re.search(r'\-(\d+)\.png$', x).group(1)))
+
+selected_df['Seq_no_big'] = selected_df['FileName'].apply(lambda x: int(convert_to_order(re.search(r'_([A-Z])_', x).group(1))))
+selected_df = selected_df[
+    selected_df['Seq_no_big'] == (selected_df['Seq_no_small']) 
+    ].drop('Seq_no_small', axis = 1).drop('Seq_no_big', axis = 1).drop('FileName', axis = 1)
 
 
 
