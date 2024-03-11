@@ -114,7 +114,7 @@ def train(
     # Needed to compute validation accuracy
     val_images, val_labels = val_dataset[:]
 
-    best_val_loss = 1_000_000.0
+    best_val_loss = torch.inf
     best_model = model
     for epoch in range(num_epochs):
         print("EPOCH {}:".format(epoch + 1))
