@@ -3,7 +3,11 @@ import torch.nn as nn
 from typing import Tuple, List
 
 
-class DynamicCNN(nn.Module):
+class CNN(nn.Module):
+    """
+    Convolutional Neural Network that takes in an image and produces a feature vector.
+    """
+
     def __init__(
         self,
         image_shape: Tuple[int, int] = (30, 30),
@@ -14,7 +18,12 @@ class DynamicCNN(nn.Module):
         padding: int = 1,
         feature_vector_output_size: int = 1,
     ):
-        super(DynamicCNN, self).__init__()
+        """
+        Args:
+            output_size (int): The number of outputs
+            image_shape (Tuple[int, int]): Shape of the input image
+        """
+        super(CNN, self).__init__()
         self.image_shape = image_shape
 
         self.num_conv_blocks = num_conv_blocks
@@ -57,59 +66,18 @@ class DynamicCNN(nn.Module):
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        for i in range(self.num_conv_blocks):
-            x = self.conv_blocks[i](x)
-            x = self.relu(x)
-            x = self.maxpool(x)
-        x = x.view(x.size(0), -1)
-        x = self.feature_vector(x)
-        return x
-
-
-# Convolutional Neural Network
-class CNN(nn.Module):
-    """
-    Convolutional Neural Network that takes in an image and produces a feature vector.
-    """
-
-    def __init__(self, output_size: int = 1, image_shape: Tuple[int, int] = (30, 30)):
-        """
-        Args:
-            output_size (int): The number of outputs
-            image_shape (Tuple[int, int]): Shape of the input image
-        """
-        super(CNN, self).__init__()
-        n_channels_1 = 16
-        n_channels_2 = 32
-        n_pooling_blocks = 2
-        final_layer_size = (
-            n_channels_2
-            * (image_shape[0] // (2 * n_pooling_blocks))
-            * (image_shape[1] // (2 * n_pooling_blocks))
-        )
-        self.conv1 = nn.Conv2d(1, n_channels_1, kernel_size=3, stride=1, padding=1)
-        self.relu = nn.ReLU()
-        self.maxpool = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.conv2 = nn.Conv2d(
-            n_channels_1, n_channels_2, kernel_size=3, stride=1, padding=1
-        )
-        self.fc = nn.Linear(final_layer_size, output_size)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
         Args:
             x (torch.Tensor): Imaege of shape (n, 1, image_shape[0], image_shape[1])
 
         Returns: torch.Tensor of size (n, output_size)
         """
-        x = self.conv1(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
-        x = self.conv2(x)
-        x = self.relu(x)
-        x = self.maxpool(x)
-        x = x.view(x.size(0), -1)  # Flatten the tensor
-        x = self.fc(x)
+        for i in range(self.num_conv_blocks):
+            x = self.conv_blocks[i](x)
+            x = self.relu(x)
+            x = self.maxpool(x)
+        x = x.view(x.size(0), -1)
+        x = self.feature_vector(x)
         return x
 
 
@@ -144,7 +112,7 @@ class DynamicCFN(nn.Module):
         self.hidden_mlp_layers = hidden_mlp_layers
         self.hidden_mlp_size = hidden_mlp_size
 
-        self.cnn = DynamicCNN(
+        self.cnn = CNN(
             image_shape=image_shape,
             num_conv_blocks=num_conv_blocks,
             filters_list=conv_filters_list,
@@ -210,7 +178,7 @@ class CFN(nn.Module):
         self.images_per_sequence = images_per_sequence
         self.feature_vector_size = feature_vector_size
         # CNN for the images, ouputs a feature vector
-        self.cnn = DynamicCNN(feature_vector_output_size=feature_vector_size)
+        self.cnn = CNN(feature_vector_output_size=feature_vector_size)
         # Merge the feature vectors to a single label
         self.merge = nn.Linear(images_per_sequence * feature_vector_size, 1)
 
@@ -273,7 +241,7 @@ class MCFN(nn.Module):
         self.images_per_sequence = images_per_sequence
         self.feature_vector_size = feature_vector_size
         # CNN for the images, ouputs a feature vector
-        self.cnn = DynamicCNN(feature_vector_output_size=feature_vector_size)
+        self.cnn = CNN(feature_vector_output_size=feature_vector_size)
         # Merge the feature vectors and metadata to a single label
         self.mlp = MLP(
             images_per_sequence * feature_vector_size + metadata_size,
