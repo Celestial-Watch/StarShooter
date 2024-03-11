@@ -255,11 +255,14 @@ def get_movement_vectors(positions: torch.Tensor) -> torch.Tensor:
 
 def get_dataframe(real_movers_csv: str, bogus_movers_csv: str) -> pd.DataFrame:
     """
-    Returns a DataFrame object grouped by the mover_id with columns file_name and label
+    Reads in a list of bogus movers and a list of real movers and combines them into a dataset while adding a label column.
+    Also aggregates the dataframe by mover id.
 
     Args:
         real_movers_csv (str): Path to the csv file containing the real movers
         bogus_movers_csv (str): Path to the csv file containing the bogus movers
+
+    Returns: Aggregated dataframe by mover id.
     """
     # Read csv
     real_movers = pd.read_csv(real_movers_csv)
