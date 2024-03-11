@@ -261,7 +261,7 @@ def get_experiment_args():
     parser.add_argument(
         "--data_path",
         type=str,
-        default="./../../scripts/data",
+        default="./../../data",
         help="Path to the data folder.",
     )
 
