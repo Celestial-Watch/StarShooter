@@ -53,11 +53,11 @@ def get_dataset(
             # Convert PIL Image to torch.Tensor
             transform = torchvision.transforms.ToTensor()
             image_tensor = transform(image)
-            # Resize the image to 224 x 224 pixels
-            image_tensor = torchvision.transforms.functional.resize(image_tensor, (224, 224))
+            # # Resize the image to 224 x 224 pixels
+            # image_tensor = torchvision.transforms.functional.resize(image_tensor, (224, 224))
 
             # Reshape image tensor to match the expected input shape
-            image_tensor = image_tensor.view(1, 1, 224, 224)
+            image_tensor = image_tensor.view(1, 1, 30, 30)
             image_tensors.append(image_tensor)
         else:
             # Loop finished without break
@@ -85,7 +85,7 @@ def get_dataset_stage1(
     y_hat_tensors = []
 
     for _, row in images_df.iterrows():
-        image_path = path_to_images + row["image"]
+        image_path = path_to_images + row["file_name"]
         try:
             # Read image as PIL Image and convert to grayscale
             image = Image.open(image_path).convert("L")
@@ -95,10 +95,10 @@ def get_dataset_stage1(
         # Convert PIL Image to torch.Tensor
         transform = torchvision.transforms.ToTensor()
         image_tensor = transform(image)
-        # Resize the image to 224 x 224 pixels
-        image_tensor = torchvision.transforms.functional.resize(image_tensor, (224, 224))
+        # # Resize the image to 224 x 224 pixels
+        # image_tensor = torchvision.transforms.functional.resize(image_tensor, (224, 224))
         # Reshape image tensor to match the expected input shape
-        image_tensor = image_tensor.view(1, 1, 224, 224)
+        image_tensor = image_tensor.view(1, 1, 30, 30)
         x_tensors.append(image_tensor)
         y_hat_tensors.append(torch.tensor([row["label"]]))
 

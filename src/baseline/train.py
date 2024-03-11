@@ -8,7 +8,8 @@ from datetime import datetime
 from datetime import datetime
 import os
 import sys
-from two_stage_baseline import Stage1, MLP, TwoStage
+from two_stage_baseline import TwoStage
+from channel_model import ChannelResNet
 from torch.utils import tensorboard
 from typing import Tuple
 from utils import get_dataframe, get_dataset, get_loaders, get_dataset_stage1
@@ -85,7 +86,7 @@ def train_epoch(
         preds = model(inputs)
 
         # Compute the loss and its gradients
-        loss = criterion(preds, labels.float())
+        loss = criterion(preds, labels)
         loss.backward()
 
         # Adjust learning weights
@@ -122,8 +123,9 @@ def get_validation_performance(
     # Disable gradient computation and reduce memory consumption.
     with torch.no_grad():
         val_preds = model(val_images)
-        val_accuracy = ((val_preds > 0.5) == val_labels).float().mean().item()
-        val_loss = criterion(val_preds, val_labels.float()).item()
+        _, predicted_labels = torch.max(val_preds, 1)
+        val_accuracy = (predicted_labels == val_labels).float().mean().item()
+        val_loss = criterion(val_preds, val_labels).item()
 
     model.train()
     return val_loss, val_accuracy
@@ -159,25 +161,25 @@ if __name__ == '__main__':
     input_dim = (30,30)
 
     # Load data
-    path_to_data = os.path.abspath("./../processing/data/alistair/30x30_images") + "/"
-    path_to_csv = os.path.abspath("./../path/to/csv") + "/"
-    dataset_stage1 = get_dataset_stage1(path_to_csv + "annotations.csv", path_to_data + "images/30x30_images/", image_shape=input_dim)
+    path_to_data = os.path.abspath("./../processing/data/alistair/30x30_images/") + "/"
+    path_to_csv = os.path.abspath("./../processing/data/alistair") + "/"
+    dataset_stage1 = get_dataset_stage1(path_to_csv + "annotations.csv", path_to_data)
     train_loader_stage1, val_loader_stage1 = get_loaders(dataset_stage1)
 
     loss1 = nn.CrossEntropyLoss()
 
 
-    stage1 = Stage1(no_classes=8)
-    optimiser = optim.Adam(stage1.parameters(), lr=0.001, momentum=0.9)
+    stage1 = ChannelResNet(no_classes=8)
+    optimiser = optim.Adam(stage1.parameters())
     stage1 = train(stage1, train_loader_stage1, val_loader_stage1, loss1, optimiser, 100, "stage1")
 
     movers_agg = get_dataframe(path_to_data + "csv/")
 
-    dataset_stage2 = get_dataset(movers_agg, path_to_data + "images/30x30_images/", image_shape=input_dim)
+    dataset_stage2 = get_dataset(movers_agg, path_to_data, image_shape=input_dim)
     train_loader, val_loader = get_loaders(dataset_stage2)
 
     loss2 = nn.BCELoss()
 
     model = TwoStage(stage1)
-    optimiser2 = optim.Adam(model.parameters(), lr=0.001, momentum=0.9)
+    optimiser2 = optim.Adam(model.parameters())
     model = train(model, train_loader, val_loader, loss2, optimiser2, 100, "stage1", True)

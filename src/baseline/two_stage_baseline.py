@@ -39,28 +39,3 @@ class MLP(nn.Module):
         x = self.fc3(x)
         x = self.sigmoid(x)
         return x
-
-
-class Stage1(nn.Module):
-    def __init__(self,
-        no_classes: int,
-        ):
-        super(Stage1, self).__init__()     
-        self.no_classes = no_classes
-        self.resnet = ResNetClassifer(no_classes)
-
-    def forward(self, x) -> torch.Tensor:
-        images = torch.split(x, self.image_shape[0], dim=2)
-        classes = [self.resnet(image) for image in images]
-        x = torch.cat(classes, dim=1)
-        return x
-
-
-class ResNetClassifer(nn.Module):
-    def __init__(self, no_classes: int):
-        super(ResNetClassifer, self).__init__()
-        self.resnet = resnet18(weights = ResNet18_Weights.DEFAULT)
-        self.resnet.fc = nn.Linear(self.resnet.fc.in_features, no_classes)
-
-    def forward(self, x) -> torch.Tensor:
-        return self.resnet(x)
