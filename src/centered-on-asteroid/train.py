@@ -308,21 +308,8 @@ if __name__ == "__main__":
         "SoftMarginLoss": nn.SoftMarginLoss(),
     }
     args = get_experiment_args()
-    # Model parameters
-    image_shape = args.image_shape
-    images_per_sequence = args.images_per_sequence
-    feature_vector_size = args.feature_vector_size
-
     # CNN parameters
-    num_conv_blocks = args.num_conv_blocks
     conv_filters_list = list(map(int, args.conv_filters_list.split(",")))
-    conv_kernel_sizes = args.conv_kernel_sizes
-    conv_strides = args.conv_strides
-    conv_padding = args.conv_padding
-
-    # MLP parameters
-    num_hidden_mlp_layers = args.num_hidden_mlp_layers
-    hidden_mlp_size = args.hidden_mlp_size
 
     # Load data -- comes from parsed args
     path_to_data = args.data_path
@@ -345,17 +332,17 @@ if __name__ == "__main__":
 
     metadata_size = len(extra_features[0])
     model = model_def.DynamicCFN(
-        images_shape=image_shape,
-        num_conv_blocks=num_conv_blocks,
+        images_shape=args.image_shape,
+        num_conv_blocks=args.num_conv_blocks,
         conv_filters_list=conv_filters_list,
-        conv_kernel_sizes=conv_kernel_sizes,
-        conv_strides=conv_strides,
-        conv_padding=conv_padding,
-        feature_vector_output_size=feature_vector_size,
-        images_per_sequence=images_per_sequence,
+        conv_kernel_sizes=args.conv_kernel_sizes,
+        conv_strides=args.conv_strides,
+        conv_padding=args.conv_padding,
+        feature_vector_output_size=args.feature_vector_size,
+        images_per_sequence=args.images_per_sequence,
         metadata_size=metadata_size,
-        num_hidden_mlp_layers=num_hidden_mlp_layers,
-        hidden_mlp_size=hidden_mlp_size,
+        num_hidden_mlp_layers=args.num_hidden_mlp_layers,
+        hidden_mlp_size=args.hidden_mlp_size,
     )
 
     # Training parameters
