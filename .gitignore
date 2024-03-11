@@ -170,3 +170,5 @@ logs/*
 model/*
 src/processing/logs/*
 src/processing/model/*
+src/baseline/logs/*
+src/baseline/model/*
