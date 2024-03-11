@@ -367,9 +367,9 @@ if __name__ == "__main__":
 
     train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
 
-    print(f"Val loader: {val_loader}")
-
-    print(f"Training on {len(train_loader)} samples.")
+    print(
+        f"Training on {len(train_loader)} samples and validating on {len(val_loader)} samples."
+    )
     model = train(
         model,
         train_loader,
