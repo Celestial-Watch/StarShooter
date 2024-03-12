@@ -351,6 +351,7 @@ def get_dataset(
     movers_agg: pd_typing.DataFrameGroupBy,
     path_to_images: str,
     image_shape: Tuple[int, int] = (30, 30),
+    dimension_to_stack: int = 2,
 ) -> Tuple[torch.utils.data.TensorDataset, List[str]]:
     """
     Gets a dataset of combined images and their labels. Each mover is represented as a single 1 x 4*image_shape[0] x image_shape[1] image.
@@ -360,6 +361,7 @@ def get_dataset(
         movers_agg (pd_typing.DataFrameGroupBy): The image entries of the data frame grouped by the mover they belong to.
         path_to_images (str): Path to images
         image_shape (tuple, optional): Desired image width and height. Defaults to (30, 30).
+        dimension_to_stack: Which dimension to stack over. 1 -> channel, 2 -> width
 
     Returns: Dataset and list of the mover ids that were actually used.
     """
@@ -398,8 +400,7 @@ def get_dataset(
             image_tensors.append(image_tensor)
         else:
             # Loop finished without break
-            # Concatenate over width dimension -> (1, 1, 120, 30)
-            x_tensor = torch.cat(image_tensors, dim=2)
+            x_tensor = torch.cat(image_tensors, dim=dimension_to_stack)
             x_tensors.append(x_tensor)
             y_hat_tensors.append(torch.Tensor([[group_data["label"].iloc[0]]]))
             mover_ids.append(mover_id)
