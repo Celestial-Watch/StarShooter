@@ -40,7 +40,7 @@ def get_position_tensor(
     Returns: List of x, y's of positions between the images for each mover. (n, 8)
     """
     movers_positions = []
-    for mover_id, group_data in movers_agg:
+    for mover_id, group_data in tqdm(movers_agg):
         mover_positions = []
         for _, row in group_data.iterrows():
             if math.isnan(row[x_cord]) or math.isnan(row[y_cord]):
