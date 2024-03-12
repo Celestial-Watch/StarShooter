@@ -141,8 +141,8 @@ def train(
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_model = copy.deepcopy(model)
-            model_path = model_folder + "/model_{}_{}".format(timestamp, epoch)
-            torch.save(best_model.state_dict(), model_path)
+            model_path = model_folder + "/model_{}".format(epoch) + ".pth"
+            torch.save(best_model, model_path)
 
     return best_model
 
@@ -351,7 +351,7 @@ if __name__ == "__main__":
     optimizer = torch.optim.Adam(model.parameters())
     epochs = args.epochs
     batch_size = args.batch_size
-    experiment_name = args.experiment_name
+    experiment_name = args.experiment_name + "_" + args.metadata
 
     train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
 

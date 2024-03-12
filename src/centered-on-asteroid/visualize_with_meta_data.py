@@ -33,11 +33,7 @@ metadata = get_position_tensor(movers_agg)
 extra_features = get_engineered_features(metadata, engineered_feature)
 data_set = CustomDataset(data_set.tensors[0], extra_features, data_set.tensors[1])
 
-meta_data_size = len(extra_features[0])
-model = model_def.MCFN(
-    images_per_sequence, feature_vector_size, image_shape, meta_data_size
-)
-model.load_state_dict(torch.load(model_path))
+model = torch.load(model_path)
 model.eval()
 print(f"Model: {model}")
 
