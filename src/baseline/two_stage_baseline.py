@@ -17,7 +17,10 @@ class TwoStage(nn.Module):
 
     def forward(self, images) -> torch.Tensor:
 
-        output_classes = self.stage1(images)
+        output_classes = []
+        for i in range(images.shape[0]):
+            output_classes.append(self.stage1(images[i]))
+        output_classes = torch.concat(output_classes)
         x = self.stage2(output_classes)
 
         return x

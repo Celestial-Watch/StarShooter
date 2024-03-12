@@ -161,9 +161,9 @@ if __name__ == '__main__':
     input_dim = (30,30)
 
     # Load data
-    path_to_data = os.path.abspath("./../processing/data/alistair/30x30_images/") + "/"
-    path_to_csv = os.path.abspath("./../processing/data/alistair") + "/"
-    dataset_stage1 = get_dataset_stage1(path_to_csv + "annotations.csv", path_to_data)
+    path_to_data = os.path.abspath("./../processing/data/alistair/30x30_images") + "/"
+    path_to_csv = os.path.abspath("./../processing/data") + "/"
+    dataset_stage1 = get_dataset_stage1(path_to_csv + "alistair/annotations.csv", path_to_data)
     train_loader_stage1, val_loader_stage1 = get_loaders(dataset_stage1)
 
     loss1 = nn.CrossEntropyLoss()
@@ -171,9 +171,9 @@ if __name__ == '__main__':
 
     stage1 = ChannelResNet(no_classes=8)
     optimiser = optim.Adam(stage1.parameters())
-    stage1 = train(stage1, train_loader_stage1, val_loader_stage1, loss1, optimiser, 100, "stage1")
+    stage1 = train(stage1, train_loader_stage1, val_loader_stage1, loss1, optimiser, 10, "stage1")
 
-    movers_agg = get_dataframe(path_to_data + "csv/")
+    movers_agg = get_dataframe(path_to_csv)
 
     dataset_stage2 = get_dataset(movers_agg, path_to_data, image_shape=input_dim)
     train_loader, val_loader = get_loaders(dataset_stage2)
@@ -182,4 +182,4 @@ if __name__ == '__main__':
 
     model = TwoStage(stage1)
     optimiser2 = optim.Adam(model.parameters())
-    model = train(model, train_loader, val_loader, loss2, optimiser2, 100, "stage1", True)
+    model = train(model, train_loader, val_loader, loss2, optimiser2, 100, "stage2", True)

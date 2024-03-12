@@ -57,7 +57,7 @@ def get_dataset(
             # image_tensor = torchvision.transforms.functional.resize(image_tensor, (224, 224))
 
             # Reshape image tensor to match the expected input shape
-            image_tensor = image_tensor.view(1, 1, 30, 30)
+            image_tensor = image_tensor.view(1, 1, *image_shape)
             image_tensors.append(image_tensor)
         else:
             # Loop finished without break
