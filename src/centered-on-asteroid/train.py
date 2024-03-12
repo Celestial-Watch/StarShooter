@@ -332,16 +332,16 @@ if __name__ == "__main__":
 
     metadata_size = len(extra_features[0])
     model = model_def.DynamicCFN(
-        images_shape=args.image_shape,
+        image_shape=args.image_shape,
         num_conv_blocks=args.num_conv_blocks,
         conv_filters_list=conv_filters_list,
-        conv_kernel_sizes=args.conv_kernel_sizes,
-        conv_strides=args.conv_strides,
+        conv_kernel_size=args.conv_kernel_sizes,
+        conv_stride=args.conv_strides,
         conv_padding=args.conv_padding,
         feature_vector_output_size=args.feature_vector_size,
         images_per_sequence=args.images_per_sequence,
         metadata_size=metadata_size,
-        num_hidden_mlp_layers=args.num_hidden_mlp_layers,
+        hidden_mlp_layers=args.num_hidden_mlp_layers,
         hidden_mlp_size=args.hidden_mlp_size,
     )
 
