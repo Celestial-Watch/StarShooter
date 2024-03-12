@@ -333,13 +333,13 @@ if __name__ == "__main__":
         required_metadata = ["pos_RightAscension", "pos_Declination"]
 
     movers_agg = get_dataframe(real_movers_file, bogus_movers_file, required_metadata)
-    data_set, mover_ids = get_dataset(movers_agg, images_folder)
+    data_set, exclude_mover_ids = get_dataset(movers_agg, images_folder)
 
     # Metadata
     engineered_features = args.metadata
     # Filter out the movers that we do not have downloaded images for
     movers_agg = movers_agg.filter(
-        lambda x: any(x["mover_id"].isin(mover_ids))
+        lambda x: x["mover_id"].iloc[0] not in exclude_mover_ids
     ).groupby("mover_id")
     extra_features = get_engineered_features(movers_agg, engineered_features)
 

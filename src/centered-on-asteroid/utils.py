@@ -292,6 +292,7 @@ def get_dataframe(
     # Group by mover
     movers = pd.concat([real_movers, bogus_movers])
     movers_agg = movers.groupby("mover_id")
+    movers_agg = movers_agg.filter(lambda x: len(x) == 4).groupby("mover_id")
     return movers_agg
 
 
@@ -309,16 +310,17 @@ def get_dataset(
         path_to_images (str): Path to the image folder
         image_shape (Tuple[int, int]): Desired image width and height.
 
-    Returns: Dataset and list of the mover ids that were actually used.
+    Returns: Dataset and list of the mover ids that were filtered out.
     """
     x_tensors = []
     y_hat_tensors = []
-    mover_ids = []
+    exclude_mover_ids = []
     for mover_id, group_data in tqdm(movers_agg):
         image_tensors = []
         # Ignore sequences that aren't 4 images long
         if len(group_data) != 4:
             # print(f"Skipping {mover_id} sequence with length: {len(group_data)}")
+            exclude_mover_ids.append(mover_id)
             continue
 
         for _, row in group_data.iterrows():
@@ -328,6 +330,7 @@ def get_dataset(
                 image = Image.open(image_path).convert("L")
             except FileNotFoundError:
                 print(f"Image of {mover_id} not found: {image_path}")
+                exclude_mover_ids.append(mover_id)
                 break
 
             # Convert PIL Image to torch.Tensor
@@ -340,6 +343,7 @@ def get_dataset(
                 image_tensor.shape[1] != image_shape[0]
                 or image_tensor.shape[2] != image_shape[1]
             ):
+                exclude_mover_ids.append(mover_id)
                 break
             # Reshape image tensor to match the expected input shape
             image_tensor = image_tensor.view(1, *(image_tensor.shape))
@@ -350,7 +354,6 @@ def get_dataset(
             x_tensor = torch.cat(image_tensors, dim=2)
             x_tensors.append(x_tensor)
             y_hat_tensors.append(torch.Tensor([[group_data["label"].iloc[0]]]))
-            mover_ids.append(mover_id)
 
     x = torch.concat(x_tensors)
     y_hat = torch.concat(y_hat_tensors)
@@ -362,7 +365,7 @@ def get_dataset(
     )
 
     data_set = torch.utils.data.TensorDataset(x, y_hat)
-    return data_set, mover_ids
+    return data_set, exclude_mover_ids
 
 
 def get_loaders(

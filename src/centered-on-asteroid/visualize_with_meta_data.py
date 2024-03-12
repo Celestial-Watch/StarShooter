@@ -33,14 +33,13 @@ real_movers_file = f"{path_to_data}/csv/movers_cond_12_image_meta_data.csv"
 bogus_movers_file = f"{path_to_data}/csv/movers_cond_2_image_meta_data.csv"
 images_folder = f"{path_to_data}/images/centered_on_asteroid/"
 movers_agg = get_dataframe(real_movers_file, bogus_movers_file, required_metadata)
-data_set, mover_ids = get_dataset(movers_agg, images_folder)
+data_set, exclude_mover_ids = get_dataset(movers_agg, images_folder)
 
 # Get engineered features
-movers_agg = movers_agg.filter(lambda x: any(x["mover_id"].isin(mover_ids))).groupby(
-    "mover_id"
-)
-metadata = get_position_tensor(movers_agg)
-extra_features = get_engineered_features(metadata, engineered_feature)
+movers_agg = movers_agg.filter(
+    lambda x: x["mover_id"].iloc[0] not in exclude_mover_ids
+).groupby("mover_id")
+extra_features = get_engineered_features(movers_agg, engineered_feature)
 data_set = CustomDataset(data_set.tensors[0], extra_features, data_set.tensors[1])
 
 model = torch.load(model_path)
