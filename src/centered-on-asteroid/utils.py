@@ -343,8 +343,8 @@ def get_dataset(
     x = torch.concat(x_tensors)
     y_hat = torch.concat(y_hat_tensors)
 
-    n_real_asteroids = y_hat.sum()
-    n_bogus_asteroids = y_hat.shape[0] - n_real_asteroids
+    n_real_asteroids = int(y_hat.sum())
+    n_bogus_asteroids = int(y_hat.shape[0] - n_real_asteroids)
     print(
         f"Movers: {n_real_asteroids + n_bogus_asteroids}, Real asteroids: {n_real_asteroids}, Bogus asteroids: {n_bogus_asteroids}"
     )
