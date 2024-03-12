@@ -53,19 +53,23 @@ def get_position_tensor(
 
 
 def get_engineered_features(
-    movers_positions: torch.Tensor, type_: str = "max_grad_diff"
+    movers_agg: pd_typing.DataFrameGroupBy, type_: str = "max_grad_diff"
 ) -> torch.Tensor:
     """
 
     Args:
-        movers_positions (torch.Tensor): (x, y) position for the 4 images. Shape: (n, 8)
+        movers_agg (DataFrameGroupBy): Dataframe for all the images grouped by the mover they belong to. Should be pre-filtered to only contain movers with 4 images that have all the position data.
         type (str): The type of engineered features to return. Options: "max_grad_diff", "gradients", "movement_vectors"
 
     Returns: The engineered features for the given type (n, z), where z is the feature vector size
     """
+    types_without_position_info = ["no_metadata"]
+    if type_ not in types_without_position_info:
+        movers_positions = get_position_tensor(movers_agg)
+
     match type_:
         case "no_metadata":
-            return torch.full((len(movers_positions), 1), 0)
+            return torch.full((len(movers_agg), 1), 0)
         case "max_grad_diff":
             get_max_grad_diffs = []
             for mover_positions in movers_positions:

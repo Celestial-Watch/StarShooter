@@ -325,8 +325,7 @@ if __name__ == "__main__":
     movers_agg = movers_agg.filter(
         lambda x: any(x["mover_id"].isin(mover_ids))
     ).groupby("mover_id")
-    metadata = get_position_tensor(movers_agg)
-    extra_features = get_engineered_features(metadata, engineered_features)
+    extra_features = get_engineered_features(movers_agg, engineered_features)
 
     data_set = CustomDataset(data_set.tensors[0], extra_features, data_set.tensors[1])
 
