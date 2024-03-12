@@ -63,6 +63,7 @@ def fetch_small_images(
     movers_to_remove = []
 
     print("Importing Small Images")
+    movers.reset_index(drop=True, inplace=True)
     for i, row in tqdm(movers.iterrows(), total=movers.shape[0]):
         image_tensors = []
         images = small_image_ids[i]
