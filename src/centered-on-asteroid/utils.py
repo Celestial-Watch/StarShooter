@@ -52,6 +52,37 @@ def get_position_tensor(
     return torch.stack(movers_positions)
 
 
+def get_metadata_tensor(
+    movers_agg: pd_typing.DataFrameGroupBy,
+    meta_data_keys: List[str],
+) -> torch.Tensor:
+    """
+    Get metadata for each of the images.
+
+    Args:
+        movers_agg (DataFrameGroupBy): Dataframe for all the images grouped by the mover they belong to. Should be pre-filtered to only contain movers with 4 images that have all the position data.
+        meta_data_keys (List[str]): List of keys to use for the metadata
+
+    Returns: List of metadata for each image for each mover. (n, 4*len(meta_data_keys))
+    """
+    movers_data = []
+    for mover_id, group_data in tqdm(movers_agg):
+        mover_data = []
+        for _, row in group_data.iterrows():
+            missing_data = False
+            for key in meta_data_keys:
+                if math.isnan(row[key]):
+                    print(f"Missing metadata for {mover_id}")
+                    missing_data = True
+                    break
+                mover_data.append(row[key])
+            if missing_data:
+                break
+        else:
+            movers_data.append(torch.Tensor(mover_data))
+    return torch.stack(movers_data)
+
+
 def get_engineered_features(
     movers_agg: pd_typing.DataFrameGroupBy, type_: str = "max_grad_diff"
 ) -> torch.Tensor:
@@ -118,6 +149,18 @@ def get_engineered_features(
         case "positions":
             movers_positions = get_position_tensor(movers_agg)
             return movers_positions
+        case "other_metadata":
+            meta_data_keys = [
+                "BackgroundMean",
+                "BackgroundSigma",
+                "MagnitudeZeroPoint",
+                "AverageResidual",
+                "RmsResidual",
+                "FitOrder",
+                "pos_Flux",
+                "pos_Magnitude",
+            ]
+            return get_metadata_tensor(movers_agg, meta_data_keys)
         case _:
             raise ValueError(f"Invalid type: {type_}")
 
