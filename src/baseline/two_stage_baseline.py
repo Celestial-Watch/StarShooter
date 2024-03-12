@@ -6,9 +6,7 @@ from typing import Tuple
 
 class TwoStage(nn.Module):
 
-    def __init__(self,
-        stage_1: nn.Module
-        ):
+    def __init__(self, stage_1: nn.Module):
 
         super(TwoStage, self).__init__()
         self.stage1 = stage_1
@@ -17,14 +15,13 @@ class TwoStage(nn.Module):
 
     def forward(self, images) -> torch.Tensor:
 
-        output_classes = []
-        for i in range(images.shape[0]):
-            output_classes.append(self.stage1(images[i]))
-        output_classes = torch.concat(output_classes)
-        x = self.stage2(output_classes)
+        images = torch.split(images, 1, dim=1)
+        classes = [self.stage1(image) for image in images]
+        output = torch.cat(classes, dim=1)
+        x = self.stage2(output)
 
         return x
-    
+
 
 class MLP(nn.Module):
     def __init__(self):
