@@ -309,7 +309,7 @@ def get_dataset(
             continue
 
         for _, row in group_data.iterrows():
-            image_path = path_to_images + row["file_name"]
+            image_path = f"{path_to_images}/{row['file_name']}"
             try:
                 # Read image as PIL Image and convert to grayscale
                 image = Image.open(image_path).convert("L")

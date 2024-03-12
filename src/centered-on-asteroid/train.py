@@ -313,9 +313,9 @@ if __name__ == "__main__":
 
     # Load data -- comes from parsed args
     path_to_data = args.data_path
-    real_movers_file = os.path.join(path_to_data, args.real_movers_file)
-    bogus_movers_file = os.path.join(path_to_data, args.bogus_movers_file)
-    images_folder = os.path.join(path_to_data, args.images_folder)
+    real_movers_file = os.path.abspath(path_to_data + args.real_movers_file)
+    bogus_movers_file = os.path.abspath(path_to_data + args.bogus_movers_file)
+    images_folder = os.path.abspath(path_to_data + args.images_folder)
     movers_agg = get_dataframe(real_movers_file, bogus_movers_file)
     data_set, mover_ids = get_dataset(movers_agg, images_folder)
 
