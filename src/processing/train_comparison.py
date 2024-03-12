@@ -12,26 +12,6 @@ from centre_images import get_loaders, get_datasets
 sys.path.insert(1, os.path.join(os.path.dirname(__file__), "../centered-on-asteroid"))
 from train import train
 
-
-# this function is altered to allow the model to be trained with classes for validation
-def get_validation_performance(
-    model: nn.Module,
-    val_images: torch.Tensor,
-    val_labels: torch.Tensor,
-    criterion: nn.modules.loss._Loss,
-) -> Tuple[float, float]:
-    # Turn off dropout and batch normalization
-    model.eval()
-
-    # Disable gradient computation and reduce memory consumption.
-    with torch.no_grad():
-        val_preds = model(val_images)
-        val_accuracy = ((val_preds > 0.5) == val_labels).float().mean().item()
-        val_loss = criterion(val_preds, val_labels.float()).item()
-
-    return val_loss, val_accuracy
-
-
 if __name__ == "__main__":
     # Model parameters
     image_shape1 = 30
