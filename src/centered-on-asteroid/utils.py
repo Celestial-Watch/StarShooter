@@ -322,13 +322,15 @@ def get_dataset(
             transform = torchvision.transforms.ToTensor()
             image_tensor = transform(image)
 
+            # image_tensor.shape: (channels, width, height)
+            # image_shape: (width, height)
             if (
-                image_tensor.shape[0] != image_shape[0]
-                or image_tensor.shape[1] != image_shape[1]
+                image_tensor.shape[1] != image_shape[0]
+                or image_tensor.shape[2] != image_shape[1]
             ):
                 break
             # Reshape image tensor to match the expected input shape
-            image_tensor = image_tensor.view(1, 1, *(image_tensor.shape))
+            image_tensor = image_tensor.view(1, *(image_tensor.shape))
             image_tensors.append(image_tensor)
         else:
             # Loop finished without break
