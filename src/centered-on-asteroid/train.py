@@ -11,7 +11,6 @@ from utils import (
     get_dataframe,
     get_dataset,
     get_loaders,
-    get_position_tensor,
     get_engineered_features,
     CustomDataset,
 )
@@ -313,10 +312,13 @@ if __name__ == "__main__":
 
     # Load data -- comes from parsed args
     path_to_data = args.data_path
-    real_movers_file = os.path.join(path_to_data, args.real_movers_file)
-    bogus_movers_file = os.path.join(path_to_data, args.bogus_movers_file)
-    images_folder = os.path.join(path_to_data, args.images_folder)
-    movers_agg = get_dataframe(real_movers_file, bogus_movers_file)
+    real_movers_file = os.path.abspath(path_to_data + args.real_movers_file)
+    bogus_movers_file = os.path.abspath(path_to_data + args.bogus_movers_file)
+    images_folder = os.path.abspath(path_to_data + args.images_folder)
+    need_position_coords = args.metadata != "no_metadata"
+    movers_agg = get_dataframe(
+        real_movers_file, bogus_movers_file, need_position_coords
+    )
     data_set, mover_ids = get_dataset(movers_agg, images_folder)
 
     # Metadata
@@ -325,23 +327,22 @@ if __name__ == "__main__":
     movers_agg = movers_agg.filter(
         lambda x: any(x["mover_id"].isin(mover_ids))
     ).groupby("mover_id")
-    metadata = get_position_tensor(movers_agg)
-    extra_features = get_engineered_features(metadata, engineered_features)
+    extra_features = get_engineered_features(movers_agg, engineered_features)
 
     data_set = CustomDataset(data_set.tensors[0], extra_features, data_set.tensors[1])
 
     metadata_size = len(extra_features[0])
     model = model_def.DynamicCFN(
-        images_shape=args.image_shape,
+        image_shape=args.image_shape,
         num_conv_blocks=args.num_conv_blocks,
         conv_filters_list=conv_filters_list,
-        conv_kernel_sizes=args.conv_kernel_sizes,
-        conv_strides=args.conv_strides,
+        conv_kernel_size=args.conv_kernel_sizes,
+        conv_stride=args.conv_strides,
         conv_padding=args.conv_padding,
         feature_vector_output_size=args.feature_vector_size,
         images_per_sequence=args.images_per_sequence,
         metadata_size=metadata_size,
-        num_hidden_mlp_layers=args.num_hidden_mlp_layers,
+        hidden_mlp_layers=args.num_hidden_mlp_layers,
         hidden_mlp_size=args.hidden_mlp_size,
     )
 
@@ -355,7 +356,7 @@ if __name__ == "__main__":
     train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
 
     print(
-        f"Training on {len(train_loader)} samples and validating on {len(val_loader)} samples."
+        f"Training on {len(train_loader)*batch_size} samples and validating on {len(val_loader)} samples."
     )
     model = train(
         model,

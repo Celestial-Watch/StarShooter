@@ -166,9 +166,11 @@ data/
 src/centered-on-asteroid/logs/
 src/centered-on-asteroid/model/
 .vscode/
-logs/*
-model/*
+logs/
+model/
 src/processing/logs
 src/processing/model
-src/baseline/logs/*
-src/baseline/model/*
+src/baseline/logs/
+src/baseline/model/
+.venv*
+src/scrape/*.txt
