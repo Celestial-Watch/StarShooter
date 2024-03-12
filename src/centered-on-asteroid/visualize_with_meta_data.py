@@ -1,10 +1,4 @@
-from utils import (
-    get_dataset,
-    get_dataframe,
-    get_position_tensor,
-    get_engineered_features,
-)
-from train_with_meta_data import CustomDataset
+from utils import get_dataset, get_dataframe, get_engineered_features, CustomDataset
 import torch
 import model_def
 import matplotlib.pyplot as plt
