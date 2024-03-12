@@ -6,6 +6,7 @@ from PIL import Image
 import torchvision
 from typing import Tuple
 import math
+from tqdm import tqdm
 
 x_cord = "pos_RightAscension"
 y_cord = "pos_Declination"
@@ -39,7 +40,7 @@ def get_position_tensor(
     Returns: List of x, y's of positions between the images for each mover. (n, 8)
     """
     movers_positions = []
-    for mover_id, group_data in movers_agg:
+    for mover_id, group_data in tqdm(movers_agg):
         mover_positions = []
         for _, row in group_data.iterrows():
             if math.isnan(row[x_cord]) or math.isnan(row[y_cord]):
@@ -52,19 +53,23 @@ def get_position_tensor(
 
 
 def get_engineered_features(
-    movers_positions: torch.Tensor, type_: str = "max_grad_diff"
+    movers_agg: pd_typing.DataFrameGroupBy, type_: str = "max_grad_diff"
 ) -> torch.Tensor:
     """
 
     Args:
-        movers_positions (torch.Tensor): (x, y) position for the 4 images. Shape: (n, 8)
+        movers_agg (DataFrameGroupBy): Dataframe for all the images grouped by the mover they belong to. Should be pre-filtered to only contain movers with 4 images that have all the position data.
         type (str): The type of engineered features to return. Options: "max_grad_diff", "gradients", "movement_vectors"
 
     Returns: The engineered features for the given type (n, z), where z is the feature vector size
     """
+    types_without_position_info = ["no_metadata"]
+    if type_ not in types_without_position_info:
+        movers_positions = get_position_tensor(movers_agg)
+
     match type_:
         case "no_metadata":
-            return torch.full((len(movers_positions), 1), 0)
+            return torch.full((len(movers_agg), 1), 0)
         case "max_grad_diff":
             get_max_grad_diffs = []
             for mover_positions in movers_positions:
@@ -253,7 +258,9 @@ def get_movement_vectors(positions: torch.Tensor) -> torch.Tensor:
     return torch.stack(deltas)
 
 
-def get_dataframe(real_movers_csv: str, bogus_movers_csv: str) -> pd.DataFrame:
+def get_dataframe(
+    real_movers_csv: str, bogus_movers_csv: str, need_position_coords: bool
+) -> pd.DataFrame:
     """
     Reads in a list of bogus movers and a list of real movers and combines them into a dataset while adding a label column.
     Also aggregates the dataframe by mover id.
@@ -261,6 +268,7 @@ def get_dataframe(real_movers_csv: str, bogus_movers_csv: str) -> pd.DataFrame:
     Args:
         real_movers_csv (str): Path to the csv file containing the real movers
         bogus_movers_csv (str): Path to the csv file containing the bogus movers
+        need_position_coords (bool): Whether to exclude movers that don't have position coordinates
 
     Returns: Aggregated dataframe by mover id.
     """
@@ -269,8 +277,11 @@ def get_dataframe(real_movers_csv: str, bogus_movers_csv: str) -> pd.DataFrame:
     bogus_movers = pd.read_csv(bogus_movers_csv)
 
     # Ignore rows with missing data
-    real_movers = real_movers.dropna(subset=[x_cord, y_cord, "file_name"])
-    bogus_movers = bogus_movers.dropna(subset=[x_cord, y_cord, "file_name"])
+    real_movers = real_movers.dropna(subset=["file_name"])
+    bogus_movers = bogus_movers.dropna(subset=["file_name"])
+    if need_position_coords:
+        real_movers = real_movers.dropna(subset=[x_cord, y_cord])
+        bogus_movers = bogus_movers.dropna(subset=[x_cord, y_cord])
 
     # Add labels
     real_movers["label"] = 1
@@ -301,7 +312,7 @@ def get_dataset(
     x_tensors = []
     y_hat_tensors = []
     mover_ids = []
-    for mover_id, group_data in movers_agg:
+    for mover_id, group_data in tqdm(movers_agg):
         image_tensors = []
         # Ignore sequences that aren't 4 images long
         if len(group_data) != 4:
@@ -309,7 +320,7 @@ def get_dataset(
             continue
 
         for _, row in group_data.iterrows():
-            image_path = path_to_images + row["file_name"]
+            image_path = f"{path_to_images}/{row['file_name']}"
             try:
                 # Read image as PIL Image and convert to grayscale
                 image = Image.open(image_path).convert("L")
@@ -321,13 +332,15 @@ def get_dataset(
             transform = torchvision.transforms.ToTensor()
             image_tensor = transform(image)
 
+            # image_tensor.shape: (channels, width, height)
+            # image_shape: (width, height)
             if (
-                image_tensor.shape[0] != image_shape[0]
-                or image_tensor.shape[1] != image_shape[1]
+                image_tensor.shape[1] != image_shape[0]
+                or image_tensor.shape[2] != image_shape[1]
             ):
                 break
             # Reshape image tensor to match the expected input shape
-            image_tensor = image_tensor.view(1, 1, *(image_tensor.shape))
+            image_tensor = image_tensor.view(1, *(image_tensor.shape))
             image_tensors.append(image_tensor)
         else:
             # Loop finished without break
@@ -340,8 +353,8 @@ def get_dataset(
     x = torch.concat(x_tensors)
     y_hat = torch.concat(y_hat_tensors)
 
-    n_real_asteroids = y_hat.sum()
-    n_bogus_asteroids = y_hat.shape[0] - n_real_asteroids
+    n_real_asteroids = int(y_hat.sum())
+    n_bogus_asteroids = int(y_hat.shape[0] - n_real_asteroids)
     print(
         f"Movers: {n_real_asteroids + n_bogus_asteroids}, Real asteroids: {n_real_asteroids}, Bogus asteroids: {n_bogus_asteroids}"
     )
