@@ -48,7 +48,10 @@ print(f"Model: {model}")
 
 fp = 0
 fn = 0
+tp = 0
+tn = 0
 plot = False
+keys = list(movers_agg.groups.keys())
 for idx, data in enumerate(data_set):
     x_tup, label = data
     x, feature_vector = x_tup
@@ -62,7 +65,7 @@ for idx, data in enumerate(data_set):
         else:
             fn += 1
 
-        mover_id = mover_ids[idx]
+        mover_id = keys[idx]
         text = f"Prediction for {mover_id}: {pred_label} ({round(pred.item(), 2)}), Label: {label.item()}"
         print(text)
         print(f"Feature vector: {feature_vector}\n")
@@ -73,9 +76,14 @@ for idx, data in enumerate(data_set):
             for i, image in enumerate(images):
                 axs[i].imshow(image.squeeze().numpy())
             plt.show()
+    else:
+        if pred_label == 1:
+            tp += 1
+        else:
+            tn += 1
 
-precision = 1 - (fp / (fp + fn))
-recall = 1 - (fn / (fp + fn))
+precision = tp / (tp + fp)
+recall = tp / (tp + fn)
 f1_score = 2 * precision * recall / (precision + recall)
 accuracy = (len(data_set) - (fp + fn)) / len(data_set)
 print(f"The model was trained with the {engineered_feature} feature.")
