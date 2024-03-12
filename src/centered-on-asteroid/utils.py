@@ -6,6 +6,7 @@ from PIL import Image
 import torchvision
 from typing import Tuple
 import math
+from tqdm import tqdm
 
 x_cord = "pos_RightAscension"
 y_cord = "pos_Declination"
@@ -301,7 +302,7 @@ def get_dataset(
     x_tensors = []
     y_hat_tensors = []
     mover_ids = []
-    for mover_id, group_data in movers_agg:
+    for mover_id, group_data in tqdm(movers_agg):
         image_tensors = []
         # Ignore sequences that aren't 4 images long
         if len(group_data) != 4:
