@@ -16,6 +16,7 @@ class TwoStage(nn.Module):
     def forward(self, images) -> torch.Tensor:
 
         images = torch.split(images, 1, dim=1)
+        self.stage1.eval()
         classes = [self.stage1(image) for image in images]
         output = torch.cat(classes, dim=1)
         x = self.stage2(output)

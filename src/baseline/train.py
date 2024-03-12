@@ -15,8 +15,8 @@ from typing import Tuple
 from utils import get_dataframe, get_dataset, get_loaders, get_dataset_stage1
 
 
-
-def train(model: nn.Module,
+def train(
+    model: nn.Module,
     training_loader: torch.utils.data.DataLoader,
     val_dataset: torch.utils.data.TensorDataset,
     criterion: nn.modules.loss._Loss,
@@ -24,7 +24,7 @@ def train(model: nn.Module,
     num_epochs: int,
     experiment_name: str,
     two_stage_training: bool = False,
-    ):
+):
 
     # Create tensorboard logger
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -48,16 +48,23 @@ def train(model: nn.Module,
 
         # Make sure gradient tracking is on, and do a pass over the data
         training_loss = train_epoch(
-            model, epoch, logger, criterion, training_loader, optimizer
+            model,
+            epoch,
+            logger,
+            criterion,
+            training_loader,
+            optimizer,
+            50,
+            two_stage_training,
         )
 
         val_loss, val_accuracy = get_validation_performance(
-            model, val_images, val_labels, criterion
+            model, val_images, val_labels, criterion, two_stage_training
         )
 
         report_performance(logger, training_loss, val_loss, val_accuracy, epoch)
 
-                # Track best performance, and save the model's state
+        # Track best performance, and save the model's state
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             best_model = copy.deepcopy(model)
@@ -65,6 +72,7 @@ def train(model: nn.Module,
             torch.save(best_model.state_dict(), model_path)
 
     return best_model
+
 
 def train_epoch(
     model: nn.Module,
@@ -74,6 +82,7 @@ def train_epoch(
     training_loader: torch.utils.data.DataLoader,
     optimizer: torch.optim.Optimizer,
     window_size: int = 50,
+    two_stage_training: bool = False,
 ):
     running_loss = 0.0
     last_loss = 0.0
@@ -86,7 +95,10 @@ def train_epoch(
         preds = model(inputs)
 
         # Compute the loss and its gradients
-        loss = criterion(preds, labels)
+        if two_stage_training:
+            loss = criterion(preds, labels.float())
+        else:
+            loss = criterion(preds, labels)
         loss.backward()
 
         # Adjust learning weights
@@ -97,7 +109,7 @@ def train_epoch(
         if i % window_size == window_size - 1:
             last_loss = running_loss / window_size  # loss per batch
 
-                    # Log data
+            # Log data
             print("  batch {} loss: {}".format(i + 1, last_loss))
             batch_number = epoch_index * len(training_loader) + i + 1
             logger.add_scalar("Loss/train", last_loss, batch_number)
@@ -107,8 +119,6 @@ def train_epoch(
     return last_loss
 
 
-
-
 # more code theivery, will change when other branch is pushed to master
 # can get this moved to a utils file
 def get_validation_performance(
@@ -116,19 +126,26 @@ def get_validation_performance(
     val_images: torch.Tensor,
     val_labels: torch.Tensor,
     criterion: nn.modules.loss._Loss,
+    two_stage_training: bool,
 ) -> Tuple[float, float]:
     # Turn off dropout and batch normalization
     model.eval()
 
     # Disable gradient computation and reduce memory consumption.
     with torch.no_grad():
-        val_preds = model(val_images)
-        _, predicted_labels = torch.max(val_preds, 1)
-        val_accuracy = (predicted_labels == val_labels).float().mean().item()
-        val_loss = criterion(val_preds, val_labels).item()
+        if two_stage_training:
+            val_preds = model(val_images)
+            val_accuracy = ((val_preds > 0.5) == val_labels).float().mean().item()
+            val_loss = criterion(val_preds, val_labels.float()).item()
+        else:
+            val_preds = model(val_images)
+            _, predicted_labels = torch.max(val_preds, 1)
+            val_accuracy = (predicted_labels == val_labels).float().mean().item()
+            val_loss = criterion(val_preds, val_labels).item()
 
     model.train()
     return val_loss, val_accuracy
+
 
 # Robin's logging code
 def report_performance(
@@ -156,22 +173,25 @@ def report_performance(
     logger.flush()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
-    input_dim = (30,30)
+    input_dim = (30, 30)
 
     # Load data
     path_to_data = os.path.abspath("./../processing/data/alistair/30x30_images") + "/"
     path_to_csv = os.path.abspath("./../processing/data") + "/"
-    dataset_stage1 = get_dataset_stage1(path_to_csv + "alistair/annotations.csv", path_to_data)
+    dataset_stage1 = get_dataset_stage1(
+        path_to_csv + "alistair/annotations.csv", path_to_data
+    )
     train_loader_stage1, val_loader_stage1 = get_loaders(dataset_stage1)
 
     loss1 = nn.CrossEntropyLoss()
 
-
     stage1 = ChannelResNet(no_classes=8)
     optimiser = optim.Adam(stage1.parameters())
-    stage1 = train(stage1, train_loader_stage1, val_loader_stage1, loss1, optimiser, 10, "stage1")
+    stage1 = train(
+        stage1, train_loader_stage1, val_loader_stage1, loss1, optimiser, 10, "stage1"
+    )
 
     movers_agg = get_dataframe(path_to_csv)
 
@@ -182,4 +202,6 @@ if __name__ == '__main__':
 
     model = TwoStage(stage1)
     optimiser2 = optim.Adam(model.parameters())
-    model = train(model, train_loader, val_loader, loss2, optimiser2, 100, "stage2", True)
+    model = train(
+        model, train_loader, val_loader, loss2, optimiser2, 100, "stage2", True
+    )
