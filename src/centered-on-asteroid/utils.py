@@ -63,24 +63,23 @@ def get_engineered_features(
 
     Returns: The engineered features for the given type (n, z), where z is the feature vector size
     """
-    types_without_position_info = ["no_metadata"]
-    if type_ not in types_without_position_info:
-        movers_positions = get_position_tensor(movers_agg)
-
     match type_:
         case "no_metadata":
             return torch.full((len(movers_agg), 1), 0)
         case "max_grad_diff":
+            movers_positions = get_position_tensor(movers_agg)
             get_max_grad_diffs = []
             for mover_positions in movers_positions:
                 get_max_grad_diffs.append(get_max_grad_diff(mover_positions))
             return torch.stack(get_max_grad_diffs)
         case "max_ang_diff":
+            movers_positions = get_position_tensor(movers_agg)
             max_ang_diffs = []
             for mover_positions in movers_positions:
                 max_ang_diffs.append(get_max_ang_diff(mover_positions))
             return torch.stack(max_ang_diffs)
         case "max_movement_vector_distance":
+            movers_positions = get_position_tensor(movers_agg)
             max_movement_vector_distances = []
             for mover_positions in movers_positions:
                 max_movement_vector_distances.append(
@@ -88,6 +87,7 @@ def get_engineered_features(
                 )
             return torch.stack(max_movement_vector_distances)
         case "max_movement_vector_distance_normalised":
+            movers_positions = get_position_tensor(movers_agg)
             max_movement_vector_distances = []
             for mover_positions in movers_positions:
                 max_movement_vector_distances.append(
@@ -95,16 +95,19 @@ def get_engineered_features(
                 )
             return torch.stack(max_movement_vector_distances)
         case "gradients":
+            movers_positions = get_position_tensor(movers_agg)
             gradients = []
             for mover_positions in movers_positions:
                 gradients.append(get_gradients(mover_positions))
             return torch.stack(gradients)
         case "angles":
+            movers_positions = get_position_tensor(movers_agg)
             angles = []
             for mover_positions in movers_positions:
                 angles.append(get_angles(mover_positions))
             return torch.stack(angles)
         case "movement_vectors":
+            movers_positions = get_position_tensor(movers_agg)
             movement_vectors = []
             for mover_positions in movers_positions:
                 movement_vectors.append(
@@ -113,6 +116,7 @@ def get_engineered_features(
 
             return torch.stack(movement_vectors)
         case "positions":
+            movers_positions = get_position_tensor(movers_agg)
             return movers_positions
         case _:
             raise ValueError(f"Invalid type: {type_}")
