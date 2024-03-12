@@ -19,9 +19,12 @@ def get_dataframe(path_to_csvs: str) -> pd.DataFrame:
     real_movers["label"] = 1
     bogus_movers["label"] = 0
 
+
     # Group by mover
     movers = pd.concat([real_movers, bogus_movers])
     movers_agg = movers.groupby("mover_id")
+    print(len(movers))
+
     return movers_agg
 
 
@@ -61,13 +64,14 @@ def get_dataset(
             image_tensors.append(image_tensor)
         else:
             # Loop finished without break
-            # Concatenate over width dimension -> (1, 1, 120, 30)
-            x_tensor = torch.cat(image_tensors, dim=2)
+            # Concatenate -> (1, 4, 30, 30)
+            x_tensor = torch.concat(image_tensors).view(1, 4, 30, 30)
             x_tensors.append(x_tensor)
             y_hat_tensors.append(torch.tensor([[group_data["label"].iloc[0]]]))
             mover_ids.append(mover_id)
 
     x = torch.concat(x_tensors)
+    print(x.shape)
     y_hat = torch.concat(y_hat_tensors)
     data_set = torch.utils.data.TensorDataset(x, y_hat)
     return data_set, mover_ids
@@ -119,4 +123,6 @@ def get_loaders(
     train_loader = torch.utils.data.DataLoader(
         train_data_set, batch_size=batch_size, shuffle=True
     )
+    print(len(train_loader))
+    print(len(val_data_set))
     return train_loader, val_data_set

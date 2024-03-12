@@ -175,7 +175,7 @@ if __name__ == '__main__':
 
     movers_agg = get_dataframe(path_to_csv)
 
-    dataset_stage2 = get_dataset(movers_agg, path_to_data, image_shape=input_dim)
+    dataset_stage2, _ = get_dataset(movers_agg, path_to_data, image_shape=input_dim)
     train_loader, val_loader = get_loaders(dataset_stage2)
 
     loss2 = nn.BCELoss()
