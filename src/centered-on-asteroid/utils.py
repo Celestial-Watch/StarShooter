@@ -258,7 +258,9 @@ def get_movement_vectors(positions: torch.Tensor) -> torch.Tensor:
     return torch.stack(deltas)
 
 
-def get_dataframe(real_movers_csv: str, bogus_movers_csv: str) -> pd.DataFrame:
+def get_dataframe(
+    real_movers_csv: str, bogus_movers_csv: str, need_position_coords: bool
+) -> pd.DataFrame:
     """
     Reads in a list of bogus movers and a list of real movers and combines them into a dataset while adding a label column.
     Also aggregates the dataframe by mover id.
@@ -266,6 +268,7 @@ def get_dataframe(real_movers_csv: str, bogus_movers_csv: str) -> pd.DataFrame:
     Args:
         real_movers_csv (str): Path to the csv file containing the real movers
         bogus_movers_csv (str): Path to the csv file containing the bogus movers
+        need_position_coords (bool): Whether to exclude movers that don't have position coordinates
 
     Returns: Aggregated dataframe by mover id.
     """
@@ -274,8 +277,11 @@ def get_dataframe(real_movers_csv: str, bogus_movers_csv: str) -> pd.DataFrame:
     bogus_movers = pd.read_csv(bogus_movers_csv)
 
     # Ignore rows with missing data
-    real_movers = real_movers.dropna(subset=[x_cord, y_cord, "file_name"])
-    bogus_movers = bogus_movers.dropna(subset=[x_cord, y_cord, "file_name"])
+    real_movers = real_movers.dropna(subset=["file_name"])
+    bogus_movers = bogus_movers.dropna(subset=["file_name"])
+    if need_position_coords:
+        real_movers = real_movers.dropna(subset=[x_cord, y_cord])
+        bogus_movers = bogus_movers.dropna(subset=[x_cord, y_cord])
 
     # Add labels
     real_movers["label"] = 1
