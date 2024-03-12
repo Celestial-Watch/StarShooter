@@ -315,10 +315,24 @@ if __name__ == "__main__":
     real_movers_file = os.path.abspath(path_to_data + args.real_movers_file)
     bogus_movers_file = os.path.abspath(path_to_data + args.bogus_movers_file)
     images_folder = os.path.abspath(path_to_data + args.images_folder)
-    need_position_coords = args.metadata != "no_metadata"
-    movers_agg = get_dataframe(
-        real_movers_file, bogus_movers_file, need_position_coords
-    )
+
+    if args.metadata == "other_metadata":
+        required_metadata = [
+            "BackgroundMean",
+            "BackgroundSigma",
+            "MagnitudeZeroPoint",
+            "AverageResidual",
+            "RmsResidual",
+            "FitOrder",
+            "pos_Flux",
+            "pos_Magnitude",
+        ]
+    elif args.metadata == "no_metadata":
+        required_metadata = []
+    else:
+        required_metadata = ["pos_RightAscension", "pos_Declination"]
+
+    movers_agg = get_dataframe(real_movers_file, bogus_movers_file, required_metadata)
     data_set, mover_ids = get_dataset(movers_agg, images_folder)
 
     # Metadata

@@ -18,11 +18,27 @@ images_per_sequence = 4
 feature_vector_size = 10
 image_shape = (30, 30)
 
+if engineered_feature == "other_metadata":
+    required_metadata = [
+        "BackgroundMean",
+        "BackgroundSigma",
+        "MagnitudeZeroPoint",
+        "AverageResidual",
+        "RmsResidual",
+        "FitOrder",
+        "pos_Flux",
+        "pos_Magnitude",
+    ]
+elif engineered_feature == "no_metadata":
+    required_metadata = []
+else:
+    required_metadata = ["pos_RightAscension", "pos_Declination"]
+
 path_to_data = os.path.abspath("./../../data/")
 real_movers_file = f"{path_to_data}/csv/movers_cond_12_image_meta_data.csv"
 bogus_movers_file = f"{path_to_data}/csv/movers_cond_2_image_meta_data.csv"
 images_folder = f"{path_to_data}/images/centered_on_asteroid/"
-movers_agg = get_dataframe(real_movers_file, bogus_movers_file)
+movers_agg = get_dataframe(real_movers_file, bogus_movers_file, required_metadata)
 data_set, mover_ids = get_dataset(movers_agg, images_folder)
 
 # Get engineered features
