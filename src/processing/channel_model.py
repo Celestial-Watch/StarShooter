@@ -4,7 +4,10 @@ import torch.nn.functional as F
 
 
 class ChannelResNet(nn.Module):
-    def __init__(self):
+    def __init__(
+        self,
+        image_size,
+    ):
         super(ChannelResNet, self).__init__()
 
         self.conv1 = nn.Conv2d(4, 16, kernel_size=3, stride=1, padding=1)
@@ -13,7 +16,7 @@ class ChannelResNet(nn.Module):
 
         self.residual_block1 = self._make_residual_block(16, 16, 2)
 
-        self.fc = nn.Linear(16 * 30 * 30, 1)
+        self.fc = nn.Linear(16 * image_size * image_size, 1)
 
     def _make_residual_block(self, in_channels, out_channels, num_blocks):
         layers = []

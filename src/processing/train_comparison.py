@@ -19,24 +19,23 @@ if __name__ == "__main__":
     crop_size = image_shape2
     images_per_sequence = 4
 
-    model1 = channel_model.ChannelResNet()
-    model2 = channel_model.ChannelResNet()
+    model1 = channel_model.ChannelResNet(image_shape1)
+    model2 = channel_model.ChannelResNet(image_shape2)
 
     # Training parameters
     loss = torch.nn.BCELoss()
     optimizer1 = torch.optim.Adam(model1.parameters(), lr=5e-4)
     optimizer2 = torch.optim.Adam(model2.parameters())
-    epochs = 100
+    epochs = 10
     batch_size = 20
     experiment1 = "smol_image"
     experiment2 = "big_image"
 
     # Load data
-    small_image_set = get_datasets(crop_size)
-    # small_image_set, big_image_set = get_datasets(crop_size)
+    small_image_set, big_image_set = get_datasets(crop_size)
 
     train_loader1, val_loader1 = get_loaders(small_image_set, batch_size=batch_size)
-    # train_loader2, val_loader2 = get_loaders(big_image_set, batch_size=batch_size)
+    train_loader2, val_loader2 = get_loaders(big_image_set, batch_size=batch_size)
 
     print(f"Training on {len(train_loader1) * batch_size} samples.")
     model1 = train(
@@ -48,12 +47,12 @@ if __name__ == "__main__":
         epochs,
         experiment1,
     )
-    # model2 = train(
-    #     model2,
-    #     train_loader2,
-    #     val_loader2,
-    #     loss,
-    #     optimizer2,
-    #     epochs,
-    #     experiment2,
-    # )
+    model2 = train(
+        model2,
+        train_loader2,
+        val_loader2,
+        loss,
+        optimizer2,
+        epochs,
+        experiment2,
+    )

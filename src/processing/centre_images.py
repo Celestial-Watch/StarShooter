@@ -136,6 +136,8 @@ def fetch_cropped_images(
     movers_to_remove = []
     images_not_found = []
     print("Importing and Cropping Large Images")
+    movers.reset_index(drop=True, inplace=True)
+
     for i, row in tqdm(movers.iterrows(), total=movers.shape[0]):
         image_tensors = []
         images = big_image_ids[i]
@@ -254,20 +256,20 @@ def get_datasets(crop_size: int, images_per_sequence=4):
         config.POS_MOVER_PATH, config.NEG_MOVER_PATH
     )
 
-    # cropped_image_set, _, movers = fetch_cropped_images(
-    #     big_image_ids,
-    #     movers,
-    #     config.BIG_IMAGE_PATH,
-    #     mover_positions,
-    #     images_per_sequence,
-    #     crop_size,
-    #     )
+    cropped_image_set, _, movers = fetch_cropped_images(
+        big_image_ids,
+        movers,
+        config.BIG_IMAGE_PATH,
+        mover_positions,
+        images_per_sequence,
+        crop_size,
+    )
 
     small_image_set, _ = fetch_small_images(
         small_image_ids, movers, config.SMALL_IMAGE_PATH
     )
 
-    return small_image_set  # , cropped_image_set
+    return small_image_set, cropped_image_set
 
 
 def get_loaders(
