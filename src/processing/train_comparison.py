@@ -24,10 +24,10 @@ if __name__ == "__main__":
 
     # Training parameters
     loss = torch.nn.BCELoss()
-    optimizer1 = torch.optim.Adam(model1.parameters(), lr=5e-4)
+    optimizer1 = torch.optim.Adam(model1.parameters())
     optimizer2 = torch.optim.Adam(model2.parameters())
     epochs = 10
-    batch_size = 20
+    batch_size = 4
     experiment1 = "smol_image"
     experiment2 = "big_image"
 

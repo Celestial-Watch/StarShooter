@@ -11,29 +11,25 @@ import os
 from tqdm import tqdm
 
 
-def images_to_fetch(csv_pos: str, csv_neg: str, images_per_mover: int = 4):
+def images_to_fetch(csv: str, images_per_mover: int = 4):
 
-    df_pos = pd.read_csv(csv_pos)
-    df_neg = pd.read_csv(csv_neg)
+    df = pd.read_csv(csv)
 
-    movers_pos = pd.DataFrame({"mover_id": df_pos["mover_id"].unique()})
-    movers_neg = pd.DataFrame({"mover_id": df_neg["mover_id"].unique()})
+    movers = pd.DataFrame(
+        {
+            "mover_id": df["mover_id"].unique(),
+            "label": df.groupby("mover_id")["label"].first(),
+        }
+    ).reset_index(drop=True)
 
-    movers_pos["label"] = 1
-    movers_neg["label"] = 0
-    print(movers_pos.shape)
-    print(movers_neg.shape)
-
-    movers = pd.concat([movers_pos, movers_neg])
     print(movers.shape)
-    df = pd.concat([df_pos, df_neg])
 
     big_image_ids = np.empty((movers.shape[0], images_per_mover), dtype=object)
     small_image_ids = np.empty((movers.shape[0], images_per_mover), dtype=object)
     positions = np.empty((movers.shape[0], images_per_mover, 2), dtype=object)
     for i, mover in tqdm(enumerate(movers["mover_id"]), total=movers.shape[0]):
-        big_images = np.array(df[df["mover_id"] == mover]["image_id"].to_list())
-        small_images = df[df["mover_id"] == mover]["centred_image_id"].to_numpy()
+        big_images = np.array(df[df["mover_id"] == mover]["totas_id"].to_list())
+        small_images = df[df["mover_id"] == mover]["file_name"].to_numpy()
         mover_positions = df[df["mover_id"] == mover][["X", "Y"]].to_numpy()
 
         big_image_ids[i] = big_images[:]
@@ -63,7 +59,6 @@ def fetch_small_images(
     movers_to_remove = []
 
     print("Importing Small Images")
-    movers.reset_index(drop=True, inplace=True)
     for i, row in tqdm(movers.iterrows(), total=movers.shape[0]):
         image_tensors = []
         images = small_image_ids[i]
@@ -136,8 +131,6 @@ def fetch_cropped_images(
     movers_to_remove = []
     images_not_found = []
     print("Importing and Cropping Large Images")
-    movers.reset_index(drop=True, inplace=True)
-
     for i, row in tqdm(movers.iterrows(), total=movers.shape[0]):
         image_tensors = []
         images = big_image_ids[i]
@@ -253,7 +246,7 @@ def crop_image_around_pixel(
 def get_datasets(crop_size: int, images_per_sequence=4):
 
     movers, small_image_ids, big_image_ids, mover_positions = images_to_fetch(
-        config.POS_MOVER_PATH, config.NEG_MOVER_PATH
+        config.ALL_MOVERS_PATH
     )
 
     cropped_image_set, _, movers = fetch_cropped_images(
