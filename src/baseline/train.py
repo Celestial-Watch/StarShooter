@@ -54,7 +54,7 @@ def train(
             criterion,
             training_loader,
             optimizer,
-            50,
+            100,
             two_stage_training,
         )
 
@@ -131,12 +131,30 @@ def get_validation_performance(
     # Turn off dropout and batch normalization
     model.eval()
 
+    # Start counts to determine precision, recall, and F1 score
+    true_pos = 0
+    false_pos = 0
+    true_neg = 0
+    false_neg = 0
+
     # Disable gradient computation and reduce memory consumption.
     with torch.no_grad():
         if two_stage_training:
             val_preds = model(val_images)
             val_accuracy = ((val_preds > 0.5) == val_labels).float().mean().item()
             val_loss = criterion(val_preds, val_labels.float()).item()
+            # determine true/false positives/negatives
+            true_pos += ((val_preds > 0.5) & (val_labels == 1)).sum().item()
+            false_pos += ((val_preds > 0.5) & (val_labels == 0)).sum().item()
+            true_neg += ((val_preds <= 0.5) & (val_labels == 0)).sum().item()
+            false_neg += ((val_preds <= 0.5) & (val_labels == 1)).sum().item()
+
+            precision = true_pos / (true_pos + false_pos)
+            recall = true_pos / (true_pos + false_neg)
+            f1 = 2 * (precision * recall) / (precision + recall)
+            print("Precision: ", precision)
+            print("Recall: ", recall)
+            print("F1 Score: ", f1)
         else:
             val_preds = model(val_images)
             _, predicted_labels = torch.max(val_preds, 1)
@@ -203,5 +221,5 @@ if __name__ == "__main__":
     model = TwoStage(stage1)
     optimiser2 = optim.Adam(model.parameters())
     model = train(
-        model, train_loader, val_loader, loss2, optimiser2, 100, "stage2", True
+        model, train_loader, val_loader, loss2, optimiser2, 10, "stage2", True
     )
