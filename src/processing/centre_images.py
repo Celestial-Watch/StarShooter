@@ -27,6 +27,11 @@ def images_to_fetch(csv: str, images_per_mover: int = 4):
     big_image_ids = np.empty((movers.shape[0], images_per_mover), dtype=object)
     small_image_ids = np.empty((movers.shape[0], images_per_mover), dtype=object)
     positions = np.empty((movers.shape[0], images_per_mover, 2), dtype=object)
+    big_image_df = pd.DataFrame()
+    small_image_df = pd.DataFrame()
+
+    movers_list = np.empty(movers.shape[0], dtype=str)
+
     for i, mover in tqdm(enumerate(movers["mover_id"]), total=movers.shape[0]):
         big_images = np.array(df[df["mover_id"] == mover]["totas_id"].to_list())
         small_images = df[df["mover_id"] == mover]["file_name"].to_numpy()
@@ -35,35 +40,59 @@ def images_to_fetch(csv: str, images_per_mover: int = 4):
         big_image_ids[i] = big_images[:]
         small_image_ids[i] = small_images[:]
         positions[i] = mover_positions[:]
+        movers_list[i] = mover
 
-    return movers, small_image_ids, big_image_ids, positions
+    movers_safe = movers.copy()
+
+    big_image_df = big_image_df.assign(
+        mover_id=movers["mover_id"].tolist(),
+        label=movers["label"].tolist(),
+        image1=big_image_ids[:, 0].tolist(),
+        image2=big_image_ids[:, 1].tolist(),
+        image3=big_image_ids[:, 2].tolist(),
+        image4=big_image_ids[:, 3].tolist(),
+        position1=positions[:, 0].tolist(),
+        position2=positions[:, 1].tolist(),
+        position3=positions[:, 2].tolist(),
+        position4=positions[:, 3].tolist(),
+    )
+
+    small_image_df = small_image_df.assign(
+        mover_id=movers["mover_id"].tolist(),
+        label=movers["label"].tolist(),
+        image1=small_image_ids[:, 0].tolist(),
+        image2=small_image_ids[:, 1].tolist(),
+        image3=small_image_ids[:, 2].tolist(),
+        image4=small_image_ids[:, 3].tolist(),
+    )
+
+    return movers, small_image_df, big_image_df
 
 
 def fetch_small_images(
-    small_image_ids: np.array,
+    small_image_df: pd.DataFrame,
     movers: pd.DataFrame,
     image_path: str,
     image_shape: Tuple = (30, 30),
     images_per_sequence: int = 4,
+    image_name_extension: str = "",
 ):
-    # Determine the dimensions of the input array
-
-    rows, cols = small_image_ids.shape
-    print(f"{small_image_ids.shape}")
-
     # Initialize an empty array with the same dimensions to store the NumPy arrays of images
-    images = np.empty((rows, cols), dtype=object)
+    images = np.empty((len(movers), images_per_sequence), dtype=object)
 
     x_tensors = []
     y_hat_tensors = []
     movers_to_remove = []
 
     print("Importing Small Images")
-    for i, row in tqdm(movers.iterrows(), total=movers.shape[0]):
+    for _, row in tqdm(small_image_df.iterrows(), total=small_image_df.shape[0]):
         image_tensors = []
-        images = small_image_ids[i]
+        images = row[["image1", "image2", "image3", "image4"]].tolist()
         mover_id = row["mover_id"]
         label = row["label"]
+
+        # if mover_id not in movers["mover_id"].to_list():
+        #     continue
 
         # Ignore sequences that aren't 4 images long
         if len(images) != images_per_sequence:
@@ -73,7 +102,9 @@ def fetch_small_images(
         for image_id in images:
             try:
                 # Read image as PIL Image and convert to grayscale
-                image_full_path = os.path.join(image_path, image_id)
+                image_full_path = os.path.join(
+                    image_path, str(image_id) + image_name_extension
+                )
                 image = Image.open(image_full_path).convert("L")
             except FileNotFoundError:
                 print(f"Image of {mover_id} not found: {image_full_path}")
@@ -83,6 +114,9 @@ def fetch_small_images(
             # Convert PIL Image to torch.Tensor
             transform = torchvision.transforms.ToTensor()
             image_tensor = transform(image)
+
+            # Normalise the image
+            image_tensor = torch.nn.functional.normalize(image_tensor, 1)
 
             # Reshape image tensor to match the expected input shape
             try:
@@ -111,19 +145,34 @@ def fetch_small_images(
 
 
 def fetch_cropped_images(
-    big_image_ids: np.array,
+    big_image_df: pd.DataFrame,
     movers: pd.DataFrame,
     image_path: str,
-    positions: np.array,
     images_per_sequence: int = 4,
     crop_size: int = 100,
 ):
     # Determine the dimensions of the input array
-    rows, cols = big_image_ids.shape
 
     # Initialize an empty array with the same dimensions to store the NumPy arrays of images
-    images = np.empty((rows, cols), dtype=object)
-    pixel_coords = np.empty((rows, cols, 2), dtype=int)
+    images = np.empty((len(movers), images_per_sequence), dtype=object)
+    pixel_coords = np.empty((len(movers), images_per_sequence, 2), dtype=object)
+
+    # Determine whether cropped files have been created before
+    path = os.path.join(
+        config.PROCESSING_PATH, f"data/alistair/cropped_images_{crop_size}"
+    )
+
+    try:
+        os.mkdir(path)
+    except OSError as e:
+        return fetch_small_images(
+            big_image_df,
+            movers,
+            path,
+            (crop_size, crop_size),
+            images_per_sequence,
+            "_" + str(crop_size) + ".png",
+        )
 
     # Iterate through the 2D array of image IDs
     x_tensors = []
@@ -131,11 +180,16 @@ def fetch_cropped_images(
     movers_to_remove = []
     images_not_found = []
     print("Importing and Cropping Large Images")
-    for i, row in tqdm(movers.iterrows(), total=movers.shape[0]):
+    for i, row in tqdm(big_image_df.iterrows(), total=big_image_df.shape[0]):
         image_tensors = []
-        images = big_image_ids[i]
         mover_id = row["mover_id"]
         label = row["label"]
+
+        images = row[["image1", "image2", "image3", "image4"]].tolist()
+        positions = row[["position1", "position2", "position3", "position4"]].tolist()
+
+        # if mover_id not in movers["mover_id"].to_list():
+        #     continue
 
         # Ignore sequences that aren't 4 images long
         if len(images) != images_per_sequence:
@@ -153,7 +207,7 @@ def fetch_cropped_images(
                 break
 
             # Get the pixel coordinates for the mover and image with a combination key
-            pixel_coords = positions[i, j]
+            pixel_coords = positions[j]
 
             # Crop the image around the pixel coordinates
             cropped_image = crop_image_around_pixel(
@@ -163,6 +217,20 @@ def fetch_cropped_images(
             # Convert PIL Image to torch.Tensor
             transform = torchvision.transforms.ToTensor()
             image_tensor = transform(cropped_image)
+
+            # Save image to ./data/alistair/cropped_images_100
+            cropped_image.save(
+                os.path.join(
+                    path,
+                    f"{image_id}_{crop_size}.png",
+                )
+            )
+
+            # Normalise the image
+            image_tensor = torch.nn.functional.normalize(
+                image_tensor,
+                1,
+            )
 
             # Reshape image tensor to match the expected input shape
             try:
@@ -205,7 +273,7 @@ def fetch_cropped_images(
     print(
         f"Intersection between images not found and whole images: {len(images_not_found_set.intersection(all_whole_images_set))}"
     )
-    return data_set, pixel_coords, movers
+    return data_set, movers
 
 
 def crop_image_around_pixel(
@@ -245,21 +313,18 @@ def crop_image_around_pixel(
 
 def get_datasets(crop_size: int, images_per_sequence=4):
 
-    movers, small_image_ids, big_image_ids, mover_positions = images_to_fetch(
-        config.ALL_MOVERS_PATH
-    )
+    movers, small_image_df, big_image_df = images_to_fetch(config.ALL_MOVERS_PATH)
 
-    cropped_image_set, _, movers = fetch_cropped_images(
-        big_image_ids,
+    cropped_image_set, movers = fetch_cropped_images(
+        big_image_df,
         movers,
         config.BIG_IMAGE_PATH,
-        mover_positions,
         images_per_sequence,
         crop_size,
     )
 
     small_image_set, _ = fetch_small_images(
-        small_image_ids, movers, config.SMALL_IMAGE_PATH
+        small_image_df, movers, config.SMALL_IMAGE_PATH
     )
 
     return small_image_set, cropped_image_set
