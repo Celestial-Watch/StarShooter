@@ -1,4 +1,4 @@
-import channel_model
+import model_def
 import torch
 import torch.nn as nn
 import os
@@ -7,7 +7,7 @@ from datetime import datetime
 from torch.utils import tensorboard
 import copy
 import sys
-from utils import get_stacked_dataset, get_loaders
+from utils import get_stacked_dataset, get_loaders, get_dataset
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from baseline.utils import get_dataframe
@@ -169,20 +169,20 @@ if __name__ == "__main__":
     images_per_sequence = 4
     feature_vector_size = 10
 
-    model = channel_model.ChannelResNet()
+    model = model_def.CFN(4, 10, (30, 30))
 
     # Training parameters
     loss = torch.nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters())
     epochs = 10
     batch_size = 4
-    expiremt_name = "end-to-end"
+    expiremt_name = "cfn-base"
 
     # Load data
     path_to_data = os.path.abspath("./../processing/data/alistair/30x30_images") + "/"
     path_to_csv = os.path.abspath("./../processing/data") + "/"
     movers_agg = get_dataframe(path_to_csv)
-    data_set, _ = get_stacked_dataset(movers_agg, path_to_data)
+    data_set, _ = get_dataset(movers_agg, path_to_data)
     train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
 
     print(f"Training on {len(train_loader) * batch_size} samples.")
