@@ -2,16 +2,16 @@ import channel_model
 import torch
 import torch.nn as nn
 import os
-import sys
 from typing import Tuple
 from datetime import datetime
 from torch.utils import tensorboard
 import copy
-from centre_images import get_loaders, get_datasets
+import os
 import sys
+from centre_images import get_dataframe, get_dataset, get_loaders
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
-from baseline.utils import get_dataframe
+from baseline.utils import get_stacked_dataset
 
 
 def train_one_epoch(
@@ -101,7 +101,7 @@ def report_performance(
 ) -> None:
     # Printing
     print("LOSS train {} valid {}".format(training_loss, val_loss))
-    print("VALIDATION-ACCURACY: ", val_accuracy * 100, "%")
+    print("ACCURACY: ", val_accuracy * 100, "%")
 
     # Loggingn
     logger.add_scalars(
@@ -136,7 +136,8 @@ def train(
 
     # Needed to compute validation accuracy
     val_images, val_labels = val_dataset[:]
-    best_val_loss = torch.inf
+
+    best_val_loss = 1_000_000.0
     best_model = model
     for epoch in range(num_epochs):
         print("EPOCH {}:".format(epoch + 1))
@@ -163,142 +164,52 @@ def train(
     return best_model
 
 
-def train_basic(
-    model: nn.Module,
-    training_loader: torch.utils.data.DataLoader,
-    val_dataset: torch.utils.data.TensorDataset,
-    criterion: nn.modules.loss._Loss,
-    optimizer: torch.optim.Optimizer,
-    num_epochs: int,
-    experiment_name: str,
-):
-    # Create tensorboard logger
-    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    run_name = "{}_{}".format(experiment_name, timestamp)
-    logger = tensorboard.writer.SummaryWriter("logs/" + run_name)
-
-    model_folder = "model/{}".format(run_name)
-    os.makedirs(model_folder)
-
-    scheduler = torch.optim.lr_scheduler.StepLR(optimizer, step_size=3, gamma=0.1)
-
-    # Needed to compute validation accuracy
-    val_images, val_labels = val_dataset[:]
-    best_val_loss = torch.inf
-    best_model = model
-    for epoch in range(num_epochs):
-        print("EPOCH {}:".format(epoch + 1))
-
-        # Make sure gradient tracking is on, and do a pass over the data
-        model.train()
-        running_loss = 0.0
-        for i, data in enumerate(training_loader):
-            inputs, labels = data
-            optimizer.zero_grad()  # reset
-            preds = model(inputs)
-
-            # Compute the loss and its gradients
-            loss = criterion(preds, labels.float())
-            loss.backward()
-
-            # Adjust learning weights
-            optimizer.step()
-            scheduler.step()
-
-            # Gather data and report
-            # print(loss.item())
-
-            running_loss += loss.item()
-            if i % 50 == 49:
-                last_loss = running_loss / 50  # loss per batch
-
-                # Log data
-                print("  batch {} loss: {}".format(i + 1, last_loss))
-                batch_number = epoch * len(training_loader) + i + 1
-                logger.add_scalar("Loss/train", last_loss, batch_number)
-
-                running_loss = 0.0
-
-        val_loss, val_accuracy = get_validation_performance(
-            model, val_images, val_labels, criterion
-        )
-
-        report_performance(logger, running_loss, val_loss, val_accuracy, epoch)
-
-        # Track best performance, and save the model's state
-        if val_loss < best_val_loss:
-            best_val_loss = val_loss
-            best_model = copy.deepcopy(model)
-            model_path = model_folder + "/model_{}_{}".format(timestamp, epoch)
-            torch.save(best_model.state_dict(), model_path)
-
-    return best_model
-
-
 if __name__ == "__main__":
     # Model parameters
-    image_shape1 = 30
-    image_shape2 = 30
-    crop_size = image_shape2
+    image_shape = crop_size = 30
     images_per_sequence = 4
 
-    model1 = channel_model.ChannelResNet(image_shape1)
-    model2 = channel_model.ChannelResNet(image_shape2)
-
-    path_to_data = os.path.abspath("./../processing/data/alistair/30x30_images") + "/"
-    path_to_csv = os.path.abspath("./../processing/data") + "/"
-    movers_agg = get_dataframe(path_to_csv)
-    data_set, _ = get_stacked_dataset(movers_agg, path_to_data)
+    model = channel_model.ChannelResNet(image_shape)
 
     # Training parameters
     loss = torch.nn.BCELoss()
-    optimizer1 = torch.optim.Adam(model1.parameters())
-    optimizer2 = torch.optim.Adam(model2.parameters(), lr=1e-4)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
     epochs = 10
     batch_size = 4
-    experiment1 = "smol_image"
-    experiment2 = f"big_image_{crop_size}_x_{crop_size}"
+    experiment_name = f"cropped_{crop_size}"
 
     # Load data
-    small_image_set, big_image_set = get_datasets(crop_size)
-
-    # train_loader1, val_loader1 = get_loaders(small_image_set, batch_size=batch_size)
-    train_loader2, val_loader2 = get_loaders(big_image_set, batch_size=batch_size)
-
-    # # plot the first image in the trainloader with matplotlib
-    # import matplotlib.pyplot as plt
-    # import numpy as np
-    # import torchvision
-
-    # # functions to show an image
-    # def imshow(img):
-    #     img = img / 2 + 0.5  # unnormalize
-    #     npimg = img.numpy()
-    #     plt.imshow(np.transpose(npimg, (1, 2, 0)))
-    #     plt.show()
-
-    # # get some random training images
-    # dataiter = iter(train_loader2)
-    # images, labels = dataiter.next()
-    # # show images
-    # imshow(torchvision.utils.make_grid(images))
-
-    print(f"Training on {len(train_loader2) * batch_size} samples.")
-    # model1 = train(
-    #     model1,
-    #     train_loader1,
-    #     val_loader1,
-    #     loss,
-    #     optimizer1,
-    #     epochs,
-    #     experiment1,
+    # path_to_data = (
+    #     os.path.abspath(f"./../processing/data/alistair/cropped_images_{crop_size}")
+    #     + "/"
     # )
-    model2 = train_basic(
-        model2,
-        train_loader2,
-        val_loader2,
+    # path_to_csv = (
+    #     os.path.abspath("./../processing/data") + "/alistair/filtered_metadata_all.csv"
+    # )
+
+    # movers_agg = get_dataframe(path_to_csv)
+    # data_set, _ = get_dataset(movers_agg, path_to_data, crop_size)
+
+    path_to_data = os.path.abspath("./../processing/data/alistair") + "/"
+    movers_agg = get_dataframe(path_to_data + "filtered_metadata_all.csv")
+    data_set, _ = get_stacked_dataset(movers_agg, path_to_data + "30x30_images/")
+    # data_set, _ = get_dataset(
+    #     movers_agg,
+    #     path_to_data + f"cropped_images_{crop_size}/",
+    #     crop_size,
+    # )
+    train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
+
+    # Create data loaders
+    train_loader, val_loader = get_loaders(data_set)
+
+    print(f"Training on {len(train_loader) * batch_size} samples.")
+    model = train(
+        model,
+        train_loader,
+        val_loader,
         loss,
-        optimizer2,
+        optimizer,
         epochs,
-        experiment2,
+        experiment_name,
     )

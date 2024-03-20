@@ -11,6 +11,66 @@ import os
 from tqdm import tqdm
 
 
+def get_dataframe(path_to_csv: str) -> pd.DataFrame:
+    """
+    Returns a DataFrame object grouped by the mover_id with columns file_name and label
+    """
+    # Read csv
+    movers = pd.read_csv(path_to_csv)
+
+    # Group by mover
+    movers_agg = movers.groupby("mover_id")
+    return movers_agg
+
+
+def get_dataset(
+    movers_agg: pd_typing.DataFrameGroupBy,
+    path_to_images: str,
+    image_size: int = 30,
+) -> Tuple[torch.utils.data.TensorDataset, List[str]]:
+
+    image_shape = (image_size, image_size)
+    # Generate input, output pairs
+    x_tensors = []
+    y_hat_tensors = []
+    mover_ids = []
+    for mover_id, group_data in tqdm(movers_agg, total=len(movers_agg)):
+        image_tensors = []
+        # Ignore sequences that aren't 4 images long
+        if len(group_data) != 4:
+            print(f"Skipping {mover_id} sequence with length: {len(group_data)}")
+            continue
+
+        for _, row in group_data.iterrows():
+            image_path = path_to_images + str(row["totas_id"]) + f"_{image_size}.png"
+            try:
+                # Read image as PIL Image and convert to grayscale
+                image = Image.open(image_path).convert("L")
+            except FileNotFoundError:
+                print(f"Image of {mover_id} not found: {image_path}")
+                break
+
+            # Convert PIL Image to torch.Tensor
+            transform = torchvision.transforms.ToTensor()
+            image_tensor = transform(image)
+
+            # Reshape image tensor to match the expected input shape
+            image_tensor = image_tensor.view(1, 1, *image_shape)
+            image_tensors.append(image_tensor)
+        else:
+            # Loop finished without break
+            # Concatenate over width dimension -> (1, 4, 30, 30)
+            x_tensor = torch.cat(image_tensors, dim=1)
+            x_tensors.append(x_tensor)
+            y_hat_tensors.append(torch.tensor([[group_data["label"].iloc[0]]]))
+            mover_ids.append(mover_id)
+
+    x = torch.concat(x_tensors)
+    y_hat = torch.concat(y_hat_tensors)
+    data_set = torch.utils.data.TensorDataset(x, y_hat)
+    return data_set, mover_ids
+
+
 def images_to_fetch(csv: str, images_per_mover: int = 4):
 
     df = pd.read_csv(csv)
@@ -145,8 +205,7 @@ def fetch_small_images(
 
 
 def fetch_cropped_images(
-    big_image_df: pd.DataFrame,
-    movers: pd.DataFrame,
+    movers_agg: pd_typing.DataFrameGroupBy,
     image_path: str,
     images_per_sequence: int = 4,
     crop_size: int = 100,
@@ -154,25 +213,25 @@ def fetch_cropped_images(
     # Determine the dimensions of the input array
 
     # Initialize an empty array with the same dimensions to store the NumPy arrays of images
-    images = np.empty((len(movers), images_per_sequence), dtype=object)
-    pixel_coords = np.empty((len(movers), images_per_sequence, 2), dtype=object)
+    # images = np.empty((len(movers), images_per_sequence), dtype=object)
+    # pixel_coords = np.empty((len(movers), images_per_sequence, 2), dtype=object)
 
     # Determine whether cropped files have been created before
     path = os.path.join(
         config.PROCESSING_PATH, f"data/alistair/cropped_images_{crop_size}"
     )
 
-    try:
-        os.mkdir(path)
-    except OSError as e:
-        return fetch_small_images(
-            big_image_df,
-            movers,
-            path,
-            (crop_size, crop_size),
-            images_per_sequence,
-            "_" + str(crop_size) + ".png",
-        )
+    # try:
+    #     os.mkdir(path)
+    # except OSError as e:
+    #     return fetch_small_images(
+    #         big_image_df,
+    #         movers,
+    #         path,
+    #         (crop_size, crop_size),
+    #         images_per_sequence,
+    #         "_" + str(crop_size) + ".png",
+    #     )
 
     # Iterate through the 2D array of image IDs
     x_tensors = []
@@ -180,23 +239,23 @@ def fetch_cropped_images(
     movers_to_remove = []
     images_not_found = []
     print("Importing and Cropping Large Images")
-    for i, row in tqdm(big_image_df.iterrows(), total=big_image_df.shape[0]):
-        image_tensors = []
-        mover_id = row["mover_id"]
-        label = row["label"]
-
-        images = row[["image1", "image2", "image3", "image4"]].tolist()
-        positions = row[["position1", "position2", "position3", "position4"]].tolist()
+    for mover_id, group_data in tqdm(movers_agg, total=len(movers_agg)):
 
         # if mover_id not in movers["mover_id"].to_list():
         #     continue
 
         # Ignore sequences that aren't 4 images long
-        if len(images) != images_per_sequence:
-            print(f"Skipping {mover_id} sequence with length: {len(images)}")
+        if len(group_data) != images_per_sequence:
+            print(f"Skipping {mover_id} sequence with length: {len(group_data)}")
             continue
 
-        for j, image_id in enumerate(images):
+        label = group_data["label"].iloc[0]
+
+        for _, row in group_data.iterrows():
+
+            image_tensors = []
+            image_id = row["totas_id"]
+
             try:
                 # Read image as PIL Image and convert to grayscale
                 image_full_path = f"{image_path}{image_id}.png"
@@ -207,7 +266,7 @@ def fetch_cropped_images(
                 break
 
             # Get the pixel coordinates for the mover and image with a combination key
-            pixel_coords = positions[j]
+            pixel_coords = (row["X"], row["Y"])
 
             # Crop the image around the pixel coordinates
             cropped_image = crop_image_around_pixel(
@@ -252,7 +311,6 @@ def fetch_cropped_images(
     y_hat = torch.concat(y_hat_tensors)
     data_set = torch.utils.data.TensorDataset(x, y_hat)
     print("Full sets not found for {} movers".format(len(movers_to_remove)))
-    movers = movers[~movers["mover_id"].isin(movers_to_remove)]
     print(images_not_found)
     images_not_found_set = set(images_not_found)
     # write the images not found to csv
@@ -273,7 +331,7 @@ def fetch_cropped_images(
     print(
         f"Intersection between images not found and whole images: {len(images_not_found_set.intersection(all_whole_images_set))}"
     )
-    return data_set, movers
+    return data_set
 
 
 def crop_image_around_pixel(
@@ -313,21 +371,29 @@ def crop_image_around_pixel(
 
 def get_datasets(crop_size: int, images_per_sequence=4):
 
-    movers, small_image_df, big_image_df = images_to_fetch(config.ALL_MOVERS_PATH)
+    # movers, small_image_df, big_image_df = images_to_fetch(config.ALL_MOVERS_PATH)
 
-    cropped_image_set, movers = fetch_cropped_images(
-        big_image_df,
-        movers,
-        config.BIG_IMAGE_PATH,
-        images_per_sequence,
-        crop_size,
+    # cropped_image_set, movers = fetch_cropped_images(
+    #     big_image_df,
+    #     movers,
+    #     config.BIG_IMAGE_PATH,
+    #     images_per_sequence,
+    #     crop_size,
+    # )
+
+    # small_image_set, _ = fetch_small_images(
+    #     small_image_df, movers, config.SMALL_IMAGE_PATH
+    # )
+
+    path_to_csv = config.ALL_MOVERS_PATH
+
+    movers_agg = get_dataframe(path_to_csv)
+
+    cropped_image_set, _ = fetch_cropped_images(
+        movers_agg, config.BIG_IMAGE_PATH, images_per_sequence, crop_size
     )
 
-    small_image_set, _ = fetch_small_images(
-        small_image_df, movers, config.SMALL_IMAGE_PATH
-    )
-
-    return small_image_set, cropped_image_set
+    return cropped_image_set
 
 
 def get_loaders(
@@ -343,4 +409,4 @@ def get_loaders(
 
 
 if __name__ == "__main__":
-    get_datasets(100)
+    get_datasets(30)
