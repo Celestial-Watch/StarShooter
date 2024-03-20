@@ -180,9 +180,8 @@ def get_stacked_dataset(
 
             # save image to folder /cropped_images_ref
 
-            id = row["totas_id"]
-
-            image.save(os.path.join(save_path, f"{id}_ref.png"))
+            # id = row["totas_id"]
+            # image.save(os.path.join(save_path, f"{id}_ref.png"))
 
             # Reshape image tensor to match the expected input shape
             image_tensor = image_tensor.view(1, 1, *image_shape)

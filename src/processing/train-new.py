@@ -166,14 +166,14 @@ def train(
 
 if __name__ == "__main__":
     # Model parameters
-    image_shape = crop_size = 30
+    image_shape = crop_size = 100
     images_per_sequence = 4
 
     model = channel_model.ChannelResNet(image_shape)
 
     # Training parameters
     loss = torch.nn.BCELoss()
-    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4, weight_decay=1e-5)
+    optimizer = torch.optim.Adam(model.parameters(), lr=1e-4)
     epochs = 10
     batch_size = 4
     experiment_name = f"cropped_{crop_size}"
@@ -192,12 +192,12 @@ if __name__ == "__main__":
 
     path_to_data = os.path.abspath("./../processing/data/alistair") + "/"
     movers_agg = get_dataframe(path_to_data + "filtered_metadata_all.csv")
-    data_set, _ = get_stacked_dataset(movers_agg, path_to_data + "30x30_images/")
-    # data_set, _ = get_dataset(
-    #     movers_agg,
-    #     path_to_data + f"cropped_images_{crop_size}/",
-    #     crop_size,
-    # )
+    # data_set, _ = get_stacked_dataset(movers_agg, path_to_data + "30x30_images/")
+    data_set, _ = get_dataset(
+        movers_agg,
+        path_to_data + f"cropped_images_{crop_size}/",
+        crop_size,
+    )
     train_loader, val_loader = get_loaders(data_set, batch_size=batch_size)
 
     # Create data loaders
