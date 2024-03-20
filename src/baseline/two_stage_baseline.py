@@ -11,6 +11,9 @@ class TwoStage(nn.Module):
         super(TwoStage, self).__init__()
         self.stage1 = stage_1
         self.stage1.eval()
+        # set require_grad false for first stage
+        for param in self.stage1.parameters():
+            param.requires_grad = False
         self.stage2 = MLP()
 
     def forward(self, images) -> torch.Tensor:
