@@ -25,7 +25,7 @@ if __name__ == "__main__":
     # Training parameters
     loss = torch.nn.BCELoss()
     optimizer1 = torch.optim.Adam(model1.parameters())
-    optimizer2 = torch.optim.Adam(model2.parameters())
+    optimizer2 = torch.optim.Adam(model2.parameters(), lr=1e-4, weight_decay=1e-5)
     epochs = 10
     batch_size = 4
     experiment1 = "smol_image"
@@ -37,16 +37,16 @@ if __name__ == "__main__":
     train_loader1, val_loader1 = get_loaders(small_image_set, batch_size=batch_size)
     train_loader2, val_loader2 = get_loaders(big_image_set, batch_size=batch_size)
 
-    print(f"Training on {len(train_loader1) * batch_size} samples.")
-    model1 = train(
-        model1,
-        train_loader1,
-        val_loader1,
-        loss,
-        optimizer1,
-        epochs,
-        experiment1,
-    )
+    # print(f"Training on {len(train_loader1) * batch_size} samples.")
+    # model1 = train(
+    #     model1,
+    #     train_loader1,
+    #     val_loader1,
+    #     loss,
+    #     optimizer1,
+    #     epochs,
+    #     experiment1,
+    # )
     model2 = train(
         model2,
         train_loader2,

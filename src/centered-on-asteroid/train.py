@@ -67,11 +67,30 @@ def get_validation_performance(
     # Turn off dropout and batch normalization
     model.eval()
 
+    # count true/false positives/negatives
+    true_pos = 0
+    true_neg = 0
+    false_pos = 0
+    false_neg = 0
+
     # Disable gradient computation and reduce memory consumption.
     with torch.no_grad():
         val_preds = model(val_images)
         val_accuracy = ((val_preds > 0.5) == val_labels).float().mean().item()
         val_loss = criterion(val_preds, val_labels.float()).item()
+
+        # update true/false positives/negatives
+        true_pos += ((val_preds > 0.5) & (val_labels == 1)).sum().item()
+        false_pos += ((val_preds > 0.5) & (val_labels == 0)).sum().item()
+        true_neg += ((val_preds <= 0.5) & (val_labels == 0)).sum().item()
+        false_neg += ((val_preds <= 0.5) & (val_labels == 1)).sum().item()
+
+        precision = true_pos / (true_pos + false_pos)
+        recall = true_pos / (true_pos + false_neg)
+        f1 = 2 * (precision * recall) / (precision + recall)
+        print("Precision: ", precision)
+        print("Recall: ", recall)
+        print("F1 Score: ", f1)
 
     return val_loss, val_accuracy
 
