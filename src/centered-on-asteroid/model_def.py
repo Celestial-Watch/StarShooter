@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import math
 from typing import Tuple, List
 
 
@@ -38,32 +39,105 @@ class DynamicCNN(nn.Module):
             ]
         )
 
+        output_shape_after_conv_blocks = image_shape
+        for i in range(num_conv_blocks):
+            output_shape_after_conv_blocks = self.get_output_after_one_conv(
+                output_shape_after_conv_blocks, kernel_size, stride, padding
+            )
+            # output_shape_after_conv_blocks = self.get_output_after_one_maxpool(
+            #     output_shape_after_conv_blocks,
+            #     self.maxpool_kernel_size,
+            #     self.maxpool_stride,
+            # )
+
         # We only need one ReLU layer and one maxpool layer, as they don't learn any parameters
         self.relu = nn.ReLU()
 
         self.maxpool = nn.MaxPool2d(
             kernel_size=self.maxpool_kernel_size, stride=self.maxpool_stride
         )
-        output_size_after_max_pools = (
-            image_shape[0] // (self.maxpool_stride**self.num_conv_blocks),
-            image_shape[1] // (self.maxpool_stride**self.num_conv_blocks),
+        # output_size_after_max_pools = (
+        #     output_shape_after_conv_blocks[0]
+        #     // (self.maxpool_stride**self.num_conv_blocks),
+        #     output_shape_after_conv_blocks[1]
+        #     // (self.maxpool_stride**self.num_conv_blocks),
+        # )
+
+        # print(f"Output size after max pools: {output_size_after_max_pools}")
+        # print(
+        #     f"feature vector input: {filters_list[-1] * output_size_after_max_pools[0] * output_size_after_max_pools[1]}"
+        # )
+
+        print(
+            f"Feature vector input size: {filters_list[-1] * output_shape_after_conv_blocks[0] * output_shape_after_conv_blocks[1]}"
         )
 
         self.feature_vector = nn.Linear(
             filters_list[-1]
-            * output_size_after_max_pools[0]
-            * output_size_after_max_pools[1],
+            * output_shape_after_conv_blocks[0]
+            * output_shape_after_conv_blocks[1],
             feature_vector_output_size,
         )
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        # print(f"Input shape: {x.shape}")
         for i in range(self.num_conv_blocks):
             x = self.conv_blocks[i](x)
+            # print(f"Shape after conv block {i}: {x.shape}")
             x = self.relu(x)
-            x = self.maxpool(x)
+            # x = self.maxpool(x)
+            # print(f"Shape after max pool {i}: {x.shape}")
         x = x.view(x.size(0), -1)
+        # print(f"Flattened shape: {x.shape}")
         x = self.feature_vector(x)
         return x
+
+    def get_output_after_one_conv(
+        self, input_shape: Tuple[int, int], kernel_size: int, stride: int, padding: int
+    ) -> Tuple[int, int]:
+        """
+        Args:
+            input_shape (Tuple[int, int]): Shape of the input image
+            kernel_size (int): Size of the kernel
+            stride (int): Stride of the convolution
+            padding (int): Padding of the convolution
+
+        Returns: Shape of the output after one convolution
+        """
+
+        return (
+            int((input_shape[0] - kernel_size + 2 * padding) / stride + 1),
+            int((input_shape[1] - kernel_size + 2 * padding) / stride + 1),
+        )
+
+    def get_output_after_one_maxpool(
+        self,
+        input_shape: Tuple[int, int],
+        kernel_size: int,
+        stride: int,
+        padding: int = 0,
+        dilation: int = 1,
+    ) -> Tuple[int, int]:
+        """
+        Args:
+            input_shape (Tuple[int, int]): Shape of the input image
+            kernel_size (int): Size of the kernel
+            stride (int): Stride of the maxpool
+            padding (int): Padding of the maxpool
+            dilation (int): Dilation of the maxpool
+
+        Returns: Shape of the output after one maxpool
+        """
+        h_out = math.floor(
+            (input_shape[0] + 2 * padding - dilation * (kernel_size - 1) - 1) / stride
+            + 1
+        )
+        w_out = math.floor(
+            (input_shape[1] + 2 * padding - dilation * (kernel_size - 1) - 1) / stride
+            + 1
+        )
+
+        return (h_out, w_out)
 
 
 # Convolutional Neural Network
@@ -178,6 +252,7 @@ class DynamicCFN(nn.Module):
         if self.use_metadata:
             feature_vectors.append(metadata)
         feature_vector = torch.cat(feature_vectors, dim=1)
+        # print(f"Feature vector shape: {feature_vector.shape}")
 
         # Fusion
         x = self.mlp(feature_vector)
@@ -303,15 +378,25 @@ class MCFN(nn.Module):
 
 if __name__ == "__main__":
     # Comparing new Dynamic Model to old model
-    test_model_no_metadata = DynamicCFN(metadata_size=0, hidden_mlp_layers=0)
+    test_model_no_metadata = DynamicCFN(
+        image_shape=(30, 30),
+        num_conv_blocks=1,
+        conv_filters_list=[16],
+        conv_kernel_size=5,
+        feature_vector_output_size=10,
+        images_per_sequence=4,
+        metadata_size=4,
+        hidden_mlp_layers=2,
+        hidden_mlp_size=64,
+    )
     print(test_model_no_metadata)
 
-    old_model = CFN(4, 10, (30, 30))
-    print(old_model)
+    # old_model = CFN(4, 10, (30, 30))
+    # print(old_model)
 
-    # Comparing new Dynamic Model to old model
-    test_model_with_metadata = DynamicCFN(metadata_size=8)
-    print(test_model_with_metadata)
+    # # Comparing new Dynamic Model to old model
+    # test_model_with_metadata = DynamicCFN(metadata_size=8)
+    # print(test_model_with_metadata)
 
-    old_model = MCFN()
-    print(old_model)
+    # old_model = MCFN()
+    # print(old_model)
