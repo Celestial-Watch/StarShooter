@@ -44,11 +44,11 @@ class DynamicCNN(nn.Module):
             output_shape_after_conv_blocks = self.get_output_after_one_conv(
                 output_shape_after_conv_blocks, kernel_size, stride, padding
             )
-            # output_shape_after_conv_blocks = self.get_output_after_one_maxpool(
-            #     output_shape_after_conv_blocks,
-            #     self.maxpool_kernel_size,
-            #     self.maxpool_stride,
-            # )
+            output_shape_after_conv_blocks = self.get_output_after_one_maxpool(
+                output_shape_after_conv_blocks,
+                self.maxpool_kernel_size,
+                self.maxpool_stride,
+            )
 
         # We only need one ReLU layer and one maxpool layer, as they don't learn any parameters
         self.relu = nn.ReLU()
@@ -85,7 +85,7 @@ class DynamicCNN(nn.Module):
             x = self.conv_blocks[i](x)
             # print(f"Shape after conv block {i}: {x.shape}")
             x = self.relu(x)
-            # x = self.maxpool(x)
+            x = self.maxpool(x)
             # print(f"Shape after max pool {i}: {x.shape}")
         x = x.view(x.size(0), -1)
         # print(f"Flattened shape: {x.shape}")

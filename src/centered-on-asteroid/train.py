@@ -25,7 +25,7 @@ def train_one_epoch(
     criterion: nn.modules.loss._Loss,
     training_loader: torch.utils.data.DataLoader,
     optimizer: torch.optim.Optimizer,
-    window_size: int = 50,
+    window_size: int = 500,
 ):
     running_loss = 0.0
     last_loss = 0.0
@@ -326,9 +326,12 @@ if __name__ == "__main__":
 
     # Load data -- comes from parsed args
     path_to_data = args.data_path
-    real_movers_file = os.path.join(path_to_data, args.real_movers_file)
-    bogus_movers_file = os.path.join(path_to_data, args.bogus_movers_file)
-    images_folder = os.path.join(path_to_data, args.images_folder)
+    # real_movers_file = os.path.join(path_to_data, args.real_movers_file)
+    # bogus_movers_file = os.path.join(path_to_data, args.bogus_movers_file)
+    # images_folder = os.path.join(path_to_data, args.images_folder)
+    real_movers_file = "../../data/csv/movers_image_metadata.csv"
+    bogus_movers_file = "../../data/csv/rejected_movers_image_metadata.csv"
+    images_folder = "../../data/centered_on_asteroids/"
     movers_agg = get_dataframe(real_movers_file, bogus_movers_file)
     data_set, mover_ids = get_dataset(movers_agg, images_folder)
 
@@ -345,16 +348,16 @@ if __name__ == "__main__":
 
     metadata_size = len(extra_features[0])
     model = model_def.DynamicCFN(
-        images_shape=image_shape,
+        image_shape=image_shape,
         num_conv_blocks=num_conv_blocks,
         conv_filters_list=conv_filters_list,
-        conv_kernel_sizes=conv_kernel_sizes,
-        conv_strides=conv_strides,
+        conv_kernel_size=conv_kernel_sizes,
+        conv_stride=conv_strides,
         conv_padding=conv_padding,
         feature_vector_output_size=feature_vector_size,
         images_per_sequence=images_per_sequence,
         metadata_size=metadata_size,
-        num_hidden_mlp_layers=num_hidden_mlp_layers,
+        hidden_mlp_layers=num_hidden_mlp_layers,
         hidden_mlp_size=hidden_mlp_size,
     )
 

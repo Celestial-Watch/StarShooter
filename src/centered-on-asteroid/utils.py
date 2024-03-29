@@ -6,6 +6,7 @@ from PIL import Image
 import torchvision
 from typing import Tuple
 import math
+import os
 
 x_cord = "pos_RightAscension"
 y_cord = "pos_Declination"
@@ -316,7 +317,7 @@ def get_dataset(
 
             # Convert PIL Image to torch.Tensor
             transform = torchvision.transforms.ToTensor()
-            image_tensor = transform(image)
+            image_tensor = transform(image).view(*image_shape)
 
             if (
                 image_tensor.shape[0] != image_shape[0]
