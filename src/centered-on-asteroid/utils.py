@@ -280,7 +280,7 @@ def get_dataframe(real_movers_csv: str, bogus_movers_csv: str) -> pd.DataFrame:
     return movers_agg
 
 
-def get_dataset(
+def get_stacked_dataset(
     movers_agg: pd_typing.DataFrameGroupBy,
     path_to_images: str,
     image_shape: Tuple[int, int] = (30, 30),
@@ -296,6 +296,64 @@ def get_dataset(
 
     Returns: Dataset and list of the mover ids that were actually used.
     """
+    x_tensors = []
+    y_hat_tensors = []
+    mover_ids = []
+    for mover_id, group_data in movers_agg:
+        image_tensors = []
+        # Ignore sequences that aren't 4 images long
+        if len(group_data) != 4:
+            # print(f"Skipping {mover_id} sequence with length: {len(group_data)}")
+            continue
+
+        for _, row in group_data.iterrows():
+            image_path = path_to_images + row["file_name"]
+            try:
+                # Read image as PIL Image and convert to grayscale
+                image = Image.open(image_path).convert("L")
+            except FileNotFoundError:
+                print(f"Image of {mover_id} not found: {image_path}")
+                break
+
+            # Convert PIL Image to torch.Tensor
+            transform = torchvision.transforms.ToTensor()
+            image_tensor = transform(image).view(*image_shape)
+
+            if (
+                image_tensor.shape[0] != image_shape[0]
+                or image_tensor.shape[1] != image_shape[1]
+            ):
+                break
+            # Reshape image tensor to match the expected input shape
+            image_tensor = image_tensor.view(1, 1, *(image_tensor.shape))
+            image_tensors.append(image_tensor)
+        else:
+            # Loop finished without break
+            # Concatenate over width dimension -> (1, 1, 120, 30)
+            x_tensor = torch.cat(image_tensors, dim=1)
+            x_tensors.append(x_tensor)
+            y_hat_tensors.append(torch.Tensor([[group_data["label"].iloc[0]]]))
+            mover_ids.append(mover_id)
+
+    x = torch.concat(x_tensors)
+    y_hat = torch.concat(y_hat_tensors)
+
+    n_real_asteroids = y_hat.sum()
+    n_bogus_asteroids = y_hat.shape[0] - n_real_asteroids
+    print(
+        f"Movers: {n_real_asteroids + n_bogus_asteroids}, Real asteroids: {n_real_asteroids}, Bogus asteroids: {n_bogus_asteroids}"
+    )
+
+    data_set = torch.utils.data.TensorDataset(x, y_hat)
+    return data_set, mover_ids
+
+
+def get_dataset(
+    movers_agg: pd_typing.DataFrameGroupBy,
+    path_to_images: str,
+    image_shape: Tuple[int, int] = (30, 30),
+) -> Tuple[torch.utils.data.TensorDataset, List[str]]:
+    # Generate input, output pairs
     x_tensors = []
     y_hat_tensors = []
     mover_ids = []
