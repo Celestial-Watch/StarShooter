@@ -167,3 +167,4 @@ src/centered-on-asteroid/logs/
 src/centered-on-asteroid/model/
 .venv*
 src/scrape/*.txt
+data_clean/
